@@ -4,7 +4,10 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Wallet.Application.Abstractions;
+using Wallet.Application.Abstractions.Accounts;
 using Wallet.Infrastructure.Persistence;
+using Wallet.Infrastructure.Persistence.Repositories;
 
 namespace Wallet.Infrastructure
 {
@@ -15,7 +18,10 @@ namespace Wallet.Infrastructure
             IConfiguration configuration)
         {
             services.AddDbContext<WalletDbContext>(options =>
-            options.UseNpgsql(configuration.GetConnectionString("WalletDb")));
+                options.UseNpgsql(configuration.GetConnectionString("WalletDb")));
+
+            services.AddScoped<IAccountRepository, AccountRepository>();
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             return services;          
         }
