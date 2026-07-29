@@ -1,8 +1,9 @@
-﻿using System;
+﻿using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using System;
 using System.Collections.Generic;
 using System.Text;
-using FluentAssertions;
-using Microsoft.EntityFrameworkCore;
 using Wallet.Application.Transfers;
 using Wallet.Domain.Accounts;
 using Wallet.Domain.Common;
@@ -107,7 +108,7 @@ namespace Wallet.IntegrationTests.Transfers
                 
                 new TransferService().Transfer(source!, destination!, new Money(40m, "USD"));
 
-                context.Set<LedgerEntry>().Add(new LedgerEntry(Guid.NewGuid(), sourceId, LedgerEntryType.Debit, new Money(1m, "USD"), DateTimeOffset.UtcNow, 0));
+                context.Set<LedgerEntry>().Add(new LedgerEntry(Guid.NewGuid(), Guid.NewGuid(), LedgerEntryType.Debit, new Money(1m, "USD"), DateTimeOffset.UtcNow, 99));
 
                 var act = async() => await new UnitOfWork(context).SaveChangesAsync();
                 await act.Should().ThrowAsync<DbUpdateException>();
@@ -124,6 +125,67 @@ namespace Wallet.IntegrationTests.Transfers
                 source.Entries.Should().BeEmpty();
                 destination.Entries.Should().BeEmpty();
             }
+        }
+
+        [Fact]
+        public async Task ConcurrentTransfers_FromSameAccount_AreRejectedByConcurrencyToken()
+        {
+            var sourceId = Guid.NewGuid();
+            var destinationId = Guid.NewGuid();
+            await SeedAccountAsync(sourceId, 100m, destinationId, 30m);
+            
+            await using var contextA = _fixture.CreateContext();
+            await using var contextB = _fixture.CreateContext();
+
+            var repositoryA = new AccountRepository(contextA);
+            var repositoryB = new AccountRepository(contextB);
+
+            var sourceA = await repositoryA.GetByIdAsync(sourceId);
+            var destinationA = await repositoryA.GetByIdAsync(destinationId);
+            var sourceB = await repositoryB.GetByIdAsync(sourceId);
+            var destinationB = await repositoryB.GetByIdAsync(destinationId);
+
+            var transferService = new TransferService();
+            
+            transferService.Transfer(sourceA!, destinationA!, new Money(80m, "USD"));
+            await new UnitOfWork(contextA).SaveChangesAsync();
+
+            transferService.Transfer(sourceB!, destinationB!, new Money(80m, "USD"));
+
+            var act = async () => await new UnitOfWork(contextB).SaveChangesAsync();
+            await act.Should().ThrowAsync<DbUpdateConcurrencyException>();
+
+            await using var verifyContext = _fixture.CreateContext();
+            var finalSource = await new AccountRepository(verifyContext).GetByIdAsync(sourceId);
+            var finalDestination = await new AccountRepository(verifyContext).GetByIdAsync(destinationId);
+
+            var totalAfter = finalSource!.Balance.Amount + finalDestination!.Balance.Amount;
+
+            totalAfter.Should().Be(100m + 30m, "the total balance should remain the same after concurrent transfers");
+        }
+
+        [Fact]
+        public async Task PessimisticLock_BlocksASecondWriterOnTheSameRow()
+        {
+            var accountId = Guid.NewGuid();
+            var otherId = Guid.NewGuid();
+            await SeedAccountAsync(accountId, 100m, otherId, 0m);
+
+            await using var contextA = _fixture.CreateContext();
+            await using var contextB = _fixture.CreateContext();
+
+            await using var transactionA = await contextA.Database.BeginTransactionAsync();
+            await contextA.Database.ExecuteSqlAsync(
+                $"SELECT 1 FROM \"Accounts\" WHERE \"Id\" = {accountId} FOR UPDATE");
+
+            await using var transactionB = await contextB.Database.BeginTransactionAsync();
+
+            var act = async () => await contextB.Database.ExecuteSqlAsync(
+                $"SELECT 1 FROM \"Accounts\" WHERE \"Id\" = {accountId} FOR UPDATE NOWAIT");
+
+            await act.Should().ThrowAsync<PostgresException>();
+
+            await transactionA.RollbackAsync();
         }
     }
 }

@@ -13,6 +13,7 @@ namespace Wallet.Infrastructure.Persistence.Configurations
         {
             builder.ToTable("Accounts");
             builder.HasKey(a => a.Id);
+            builder.Property<uint>("xmin").IsRowVersion();
 
             builder.ComplexProperty(a => a.Balance, b =>
             {

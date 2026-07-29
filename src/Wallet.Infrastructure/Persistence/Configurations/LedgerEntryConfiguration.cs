@@ -23,7 +23,7 @@ namespace Wallet.Infrastructure.Persistence.Configurations
             builder.Property(e => e.OccurredAt);
             builder.Property(e => e.Sequence);
 
-            builder.HasIndex(e => new { e.AccountId, e.Sequence }).IsUnique();
+            builder.HasIndex(e => new { e.AccountId, e.Sequence });
         }
     }
 }
