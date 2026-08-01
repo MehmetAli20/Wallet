@@ -1,4 +1,5 @@
 ﻿using Wallet.Domain.Common;
+using Wallet.Domain.Exceptions;
 
 namespace Wallet.Domain.Accounts
 {
@@ -64,14 +65,9 @@ namespace Wallet.Domain.Accounts
                 throw new ArgumentException("Withdrawal amount must be positive", nameof(amount));
             }
 
-            if (amount.Currency != Balance.Currency)
-            {
-                throw new InvalidOperationException("Currency mismatch between withdrawal amount and account balance.");
-            }
-
             if (amount.Amount > Balance.Amount)
             {
-                throw new InvalidOperationException("Insufficient funds for withdrawal.");
+                throw new InsufficientFundsException(Id);
             }
 
             Balance = Balance.Subtract(amount);

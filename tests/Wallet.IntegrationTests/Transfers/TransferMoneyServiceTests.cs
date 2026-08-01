@@ -4,9 +4,11 @@ using Npgsql;
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Wallet.Application.Transfers;
+using Wallet.Application.Abstractions;
+using Wallet.Application.Transfers.TransferMoney;
 using Wallet.Domain.Accounts;
 using Wallet.Domain.Common;
+using Wallet.Domain.Exceptions;
 using Wallet.Domain.Transfers;
 using Wallet.Infrastructure.Persistence;
 using Wallet.Infrastructure.Persistence.Repositories;
@@ -22,7 +24,7 @@ namespace Wallet.IntegrationTests.Transfers
             _fixture = fixture;
         }
 
-        private static TransferMoneyService CreateService(WalletDbContext context)
+        private static TransferMoneyCommandHandler CreateHandler(WalletDbContext context)
         {
             return new(new AccountRepository(context), new UnitOfWork(context), new TransferService());
         }
@@ -48,7 +50,9 @@ namespace Wallet.IntegrationTests.Transfers
 
             await using (var context = _fixture.CreateContext())
             {
-                await CreateService(context).TransferAsync(sourceId, destinationId, new Money(30m, "USD"));
+                await CreateHandler(context).Handle(
+                    new TransferMoneyCommand(sourceId, destinationId, 30m, "USD", Guid.NewGuid().ToString()),
+                    CancellationToken.None);
             }
 
             await using (var context = _fixture.CreateContext())
@@ -76,8 +80,10 @@ namespace Wallet.IntegrationTests.Transfers
 
             await using(var context = _fixture.CreateContext())
             {
-                var act = async() => await CreateService(context).TransferAsync(sourceId, destinationId, new Money(500m, "USD"));
-                await act.Should().ThrowAsync<InvalidOperationException>();
+                var act = async () => await CreateHandler(context).Handle(
+                    new TransferMoneyCommand(sourceId, destinationId, 500m, "USD", Guid.NewGuid().ToString()),
+                    CancellationToken.None);
+                await act.Should().ThrowAsync<InsufficientFundsException>();
             }
 
             await using(var context = _fixture.CreateContext())
@@ -153,7 +159,7 @@ namespace Wallet.IntegrationTests.Transfers
             transferService.Transfer(sourceB!, destinationB!, new Money(80m, "USD"));
 
             var act = async () => await new UnitOfWork(contextB).SaveChangesAsync();
-            await act.Should().ThrowAsync<DbUpdateConcurrencyException>();
+            await act.Should().ThrowAsync<ConcurrencyConflictException>();
 
             await using var verifyContext = _fixture.CreateContext();
             var finalSource = await new AccountRepository(verifyContext).GetByIdAsync(sourceId);

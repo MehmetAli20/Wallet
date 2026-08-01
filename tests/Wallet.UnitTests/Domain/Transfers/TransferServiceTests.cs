@@ -1,6 +1,7 @@
 ﻿using FluentAssertions;
 using Wallet.Domain.Accounts;
 using Wallet.Domain.Common;
+using Wallet.Domain.Exceptions;
 using Wallet.Domain.Transfers;
 
 namespace Wallet.UnitTests.Domain.Transfers
@@ -106,7 +107,7 @@ namespace Wallet.UnitTests.Domain.Transfers
 
             var act = () => _service.Transfer(source, destination, new Money(150m, "USD"));
 
-            act.Should().Throw<InvalidOperationException>();
+            act.Should().Throw<InsufficientFundsException>();
             source.Balance.Should().Be(new Money(100m, "USD"));
             destination.Balance.Should().Be(new Money(30m, "USD"));
             source.Entries.Should().BeEmpty();
@@ -121,7 +122,7 @@ namespace Wallet.UnitTests.Domain.Transfers
 
             var act = () => _service.Transfer(source, destination, new Money(40m, "USD"));
 
-            act.Should().Throw<InvalidOperationException>();
+            act.Should().Throw<CurrencyMismatchException>();
             source.Balance.Should().Be(new Money(100m, "USD"));
             destination.Balance.Should().Be(new Money(30m, "EUR"));
             source.Entries.Should().BeEmpty();
@@ -136,7 +137,7 @@ namespace Wallet.UnitTests.Domain.Transfers
 
             var act = () => _service.Transfer(source, destination, new Money(40m, "EUR"));
 
-            act.Should().Throw<InvalidOperationException>();
+            act.Should().Throw<CurrencyMismatchException>();
             source.Balance.Should().Be(new Money(100m, "USD"));
         }
     }

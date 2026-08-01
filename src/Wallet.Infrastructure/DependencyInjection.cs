@@ -7,6 +7,7 @@ using System.Text;
 using Wallet.Application.Abstractions;
 using Wallet.Application.Abstractions.Accounts;
 using Wallet.Infrastructure.Persistence;
+using Wallet.Infrastructure.Persistence.Idempotency;
 using Wallet.Infrastructure.Persistence.Repositories;
 
 namespace Wallet.Infrastructure
@@ -22,6 +23,7 @@ namespace Wallet.Infrastructure
 
             services.AddScoped<IAccountRepository, AccountRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
+            services.AddScoped<IIdempotencyStore, IdempotencyStore>();  
 
             return services;          
         }

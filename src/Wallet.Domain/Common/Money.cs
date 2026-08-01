@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Wallet.Domain.Exceptions;
 
 namespace Wallet.Domain.Common
 {
@@ -35,7 +36,7 @@ namespace Wallet.Domain.Common
         {
             if (Currency != other.Currency)
             {
-                throw new InvalidOperationException("Currencies must match.");
+                throw new CurrencyMismatchException(Currency, other.Currency);
             }
         }
     }

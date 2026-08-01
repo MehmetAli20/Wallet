@@ -1,3 +1,4 @@
+using Wallet.Api.Middleware;
 using Wallet.Application;
 using Wallet.Infrastructure;
 using Wallet.Infrastructure.Persistence;
@@ -12,6 +13,8 @@ builder.Services.AddOpenApi();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddHealthChecks().AddDbContextCheck<WalletDbContext>();
+builder.Services.AddExceptionHandler<DomainExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 var app = builder.Build();
 
@@ -21,6 +24,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseExceptionHandler();
 app.UseHttpsRedirection();
 
 app.UseAuthorization();

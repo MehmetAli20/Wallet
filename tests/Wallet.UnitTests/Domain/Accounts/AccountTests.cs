@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Text;
 using Wallet.Domain.Accounts;
 using Wallet.Domain.Common;
+using Wallet.Domain.Exceptions;
 
 namespace Wallet.UnitTests.Domain.Accounts
 {
@@ -80,7 +81,7 @@ namespace Wallet.UnitTests.Domain.Accounts
         {
             var account = new Account(Guid.NewGuid(), new Money(100m, "USD"));
             var act = () => account.Withdraw(new Money(150m, "USD"));
-            act.Should().Throw<InvalidOperationException>();
+            act.Should().Throw<InsufficientFundsException>();
             account.Balance.Should().Be(new Money(100m, "USD")); 
         }
 
@@ -89,7 +90,7 @@ namespace Wallet.UnitTests.Domain.Accounts
         {
             var account = new Account(Guid.NewGuid(), new Money(100m, "USD"));
             var act = () => account.Withdraw(new Money(50m, "EUR"));
-            act.Should().Throw<InvalidOperationException>();
+            act.Should().Throw<CurrencyMismatchException>();
         }
 
         [Fact]
@@ -115,7 +116,7 @@ namespace Wallet.UnitTests.Domain.Accounts
         {
             var account = new Account(Guid.NewGuid(), new Money(100m, "USD"));
             var act = () => account.Deposit(new Money(50m, "EUR"));
-            act.Should().Throw<InvalidOperationException>();
+            act.Should().Throw<CurrencyMismatchException>();
         }
 
         [Theory]
@@ -176,7 +177,7 @@ namespace Wallet.UnitTests.Domain.Accounts
             var account = new Account(Guid.NewGuid(), new Money(100m, "USD"));
             var act = () => account.Withdraw(new Money(150m, "USD"));
 
-            act.Should().Throw<InvalidOperationException>();
+            act.Should().Throw<InsufficientFundsException>();
             account.Entries.Should().BeEmpty();
         }
     }

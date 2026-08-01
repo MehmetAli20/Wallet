@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using Wallet.Domain.Accounts;
 using Wallet.Domain.Common;
+using Wallet.Domain.Exceptions;
 
 namespace Wallet.Domain.Transfers
 {
@@ -37,12 +38,12 @@ namespace Wallet.Domain.Transfers
 
             if (source.Balance.Currency != destination.Balance.Currency || destination.Balance.Currency != amount.Currency)
             {
-                throw new InvalidOperationException("Accounts and amount must have the same currency.");
+                throw new CurrencyMismatchException(destination.Balance.Currency, source.Balance.Currency);
             }
 
             if(source.Balance.Amount < amount.Amount)
             {
-                throw new InvalidOperationException("Source account does not have sufficient funds.");
+                throw new InsufficientFundsException(source.Id);
             }
 
             source.Withdraw(amount);

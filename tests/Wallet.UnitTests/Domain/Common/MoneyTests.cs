@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using Wallet.Domain.Common;
+using Wallet.Domain.Exceptions;
 
 namespace Wallet.UnitTests.Domain.Common
 {
@@ -91,7 +92,7 @@ namespace Wallet.UnitTests.Domain.Common
 
             var act = () => tryMoney.Add(usdMoney);
 
-            act.Should().Throw<InvalidOperationException>();
+            act.Should().Throw<CurrencyMismatchException>();
         }
 
         [Fact]
@@ -102,7 +103,7 @@ namespace Wallet.UnitTests.Domain.Common
 
             var act = () => tryMoney.Subtract(usdMoney);
 
-            act.Should().Throw<InvalidOperationException>();
+            act.Should().Throw<CurrencyMismatchException>();
         }
 
         [Fact]
