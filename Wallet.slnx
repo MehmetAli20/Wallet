@@ -1,12 +1,15 @@
 <Solution>
   <Folder Name="/Solution Items/">
+    <File Path=".dockerignore" />
     <File Path=".env" />
     <File Path="docker-compose.yml" />
+    <File Path="Dockerfile" />
   </Folder>
   <Project Path="src/Wallet.Api/Wallet.Api.csproj" />
   <Project Path="src/Wallet.Application/Wallet.Application.csproj" />
   <Project Path="src/Wallet.Domain/Wallet.Domain.csproj" />
   <Project Path="src/Wallet.Infrastructure/Wallet.Infrastructure.csproj" />
+  <Project Path="src/Wallet.Worker/Wallet.Worker.csproj" Id="0e499d54-3ec3-4292-b796-1719ce1e98cc" />
   <Project Path="tests/Wallet.ArchitectureTests/Wallet.ArchitectureTests.csproj" />
   <Project Path="tests/Wallet.IntegrationTests/Wallet.IntegrationTests.csproj" />
   <Project Path="tests/Wallet.UnitTests/Wallet.UnitTests.csproj" />

@@ -1,0 +1,21 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+COPY ["src/Wallet.Api/Wallet.Api.csproj", "src/Wallet.Api/"]
+COPY ["src/Wallet.Application/Wallet.Application.csproj", "src/Wallet.Application/"]
+COPY ["src/Wallet.Infrastructure/Wallet.Infrastructure.csproj", "src/Wallet.Infrastructure/"]
+COPY ["src/Wallet.Domain/Wallet.Domain.csproj", "src/Wallet.Domain/"]
+RUN dotnet restore "src/Wallet.Api/Wallet.Api.csproj"
+
+COPY . .
+RUN dotnet publish "src/Wallet.Api/Wallet.Api.csproj" -c Release -o /app/publish --no-restore
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+WORKDIR /app
+COPY --from=build /app/publish .
+
+ENV ASPNETCORE_URLS=http://+:8080
+EXPOSE 8080
+
+USER app
+ENTRYPOINT ["dotnet", "Wallet.Api.dll"]

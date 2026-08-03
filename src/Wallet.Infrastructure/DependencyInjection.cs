@@ -23,7 +23,8 @@ namespace Wallet.Infrastructure
 
             services.AddScoped<IAccountRepository, AccountRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
-            services.AddScoped<IIdempotencyStore, IdempotencyStore>();  
+            services.AddScoped<IIdempotencyStore, IdempotencyStore>();
+            services.AddScoped<IReconciliationRepository, ReconciliationRepository>();
 
             return services;          
         }
