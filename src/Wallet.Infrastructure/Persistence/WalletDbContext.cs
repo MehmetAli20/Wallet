@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Wallet.Domain.Accounts;
+using Wallet.Domain.Transfers;
 
 namespace Wallet.Infrastructure.Persistence
 {
@@ -17,6 +18,7 @@ namespace Wallet.Infrastructure.Persistence
         public DbSet<Account> Accounts => Set<Account>();
 
         public DbSet<LedgerEntry> LedgerEntries => Set<LedgerEntry>();
+        public DbSet<ScheduledTransfer> ScheduledTransfers => Set<ScheduledTransfer>();
         protected override void OnModelCreating(ModelBuilder modelbuilder)
         {
             modelbuilder.ApplyConfigurationsFromAssembly(typeof(WalletDbContext).Assembly);

@@ -25,7 +25,17 @@ services:
             - "8080:8080"
         depends_on:
             postgres:
-                condition: service_healthy     
+                condition: service_healthy
+    worker:
+        build:
+            context: .
+            dockerfile: Dockerfile.worker
+        environment:
+            ASPNETCORE_ENVIRONMENT: Development
+            ConnectionStrings__WalletDb: "Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+        depends_on:
+            postgres:
+                condition: service_healthy
 volumes:
     postgres-data:
 

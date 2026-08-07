@@ -11,7 +11,7 @@ using Wallet.Domain.Common;
 using Wallet.Domain.Exceptions;
 using Wallet.Domain.Transfers;
 using Wallet.Infrastructure.Persistence;
-using Wallet.Infrastructure.Persistence.Repositories;
+using Wallet.Infrastructure.Persistence.Repositories.AccountRepository;
 
 namespace Wallet.IntegrationTests.Transfers
 {

@@ -6,9 +6,12 @@ using System.Collections.Generic;
 using System.Text;
 using Wallet.Application.Abstractions;
 using Wallet.Application.Abstractions.Accounts;
+using Wallet.Application.Abstractions.Transfers;
 using Wallet.Infrastructure.Persistence;
 using Wallet.Infrastructure.Persistence.Idempotency;
 using Wallet.Infrastructure.Persistence.Repositories;
+using Wallet.Infrastructure.Persistence.Repositories.AccountRepository;
+using Wallet.Infrastructure.Persistence.Repositories.TransferRepository;
 
 namespace Wallet.Infrastructure
 {
@@ -22,6 +25,7 @@ namespace Wallet.Infrastructure
                 options.UseNpgsql(configuration.GetConnectionString("WalletDb")));
 
             services.AddScoped<IAccountRepository, AccountRepository>();
+            services.AddScoped<IScheduledTransferRepository, ScheduledTransferRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<IIdempotencyStore, IdempotencyStore>();
             services.AddScoped<IReconciliationRepository, ReconciliationRepository>();
