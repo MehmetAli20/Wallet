@@ -1,0 +1,27 @@
+apiVersion: skaffold/v4beta11
+kind: Config
+metadata:
+  name: wallet
+build:
+  local:
+    push: false
+  artifacts:
+    - image: wallet-api
+      docker:
+        dockerfile: Dockerfile
+    - image: wallet-worker
+      docker:
+        dockerfile: Dockerfile.worker
+manifests:
+  rawYaml:
+    - k8s/api-deployment.yaml
+    - k8s/api-service.yaml
+    - k8s/worker-deployment.yaml
+deploy:
+  kubectl: {}
+portForward:
+  - resourceType: service
+    resourceName: api
+    namespace: default
+    port: 8080
+    localPort: 8080

@@ -31,5 +31,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHealthChecks("/health");
+app.MapGet("/version", () => "v1-skaffold-test");
 
 app.Run();

@@ -6,6 +6,9 @@
 # dotenv files
 .env
 
+# Kubernetes secrets (contain real credentials, mirror .env treatment)
+k8s/postgres-secret.yaml
+
 # User-specific files
 *.rsuser
 *.suo
