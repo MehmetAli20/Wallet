@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
-using Wallet.Application.Abstractions;
+using Wallet.Application.Abstractions.Exceptions;
 using Wallet.Domain.Exceptions;
 
 namespace Wallet.Api.Middleware
@@ -34,6 +34,7 @@ namespace Wallet.Api.Middleware
                 InvalidTransferException => (StatusCodes.Status400BadRequest, "Invalid transfer"),
                 ArgumentException => (StatusCodes.Status400BadRequest, "Invalid input"),
                 ConcurrencyConflictException => (StatusCodes.Status409Conflict, "Concurrent modification"),
+                InvalidCredentialsException => (StatusCodes.Status401Unauthorized, "Invalid credentials"),
                 _ => (0, string.Empty)
             };
             if(statusCode == 0)

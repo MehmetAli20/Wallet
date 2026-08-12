@@ -4,7 +4,7 @@ using Npgsql;
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Wallet.Application.Abstractions;
+using Wallet.Application.Abstractions.Exceptions;
 using Wallet.Application.Transfers.TransferMoney;
 using Wallet.Domain.Accounts;
 using Wallet.Domain.Common;

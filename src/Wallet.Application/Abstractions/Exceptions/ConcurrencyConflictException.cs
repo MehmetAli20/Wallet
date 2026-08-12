@@ -1,4 +1,4 @@
-namespace Wallet.Application.Abstractions
+namespace Wallet.Application.Abstractions.Exceptions
 {
     public class ConcurrencyConflictException : Exception
     {

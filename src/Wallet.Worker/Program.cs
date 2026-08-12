@@ -2,7 +2,9 @@ using Hangfire;
 using Hangfire.Dashboard;
 using Hangfire.PostgreSql;
 using Wallet.Application;
+using Wallet.Application.Abstractions.Users;
 using Wallet.Infrastructure;
+using Wallet.Worker.Authentication;
 using Wallet.Worker.Jobs;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,6 +19,7 @@ builder.Services.AddHangfire(config => config
 builder.Services.AddHangfireServer();
 builder.Services.AddScoped<ReconciliationJob>();
 builder.Services.AddScoped<ScheduledTransferJob>();
+builder.Services.AddSingleton<ICurrentUser, SystemCurrentUser>();
 
 var app = builder.Build();
 

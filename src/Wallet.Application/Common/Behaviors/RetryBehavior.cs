@@ -1,7 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Wallet.Application.Abstractions;
+using Wallet.Application.Abstractions.Exceptions;
 
 namespace Wallet.Application.Common.Behaviors;
 

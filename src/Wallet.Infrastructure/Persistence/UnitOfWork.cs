@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Wallet.Application.Abstractions;
+using Wallet.Application.Abstractions.Exceptions;
 
 namespace Wallet.Infrastructure.Persistence
 {

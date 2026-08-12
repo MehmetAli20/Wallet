@@ -8,6 +8,7 @@ using Wallet.Application.Abstractions;
 using Wallet.Application.Abstractions.Accounts;
 using Wallet.Application.Abstractions.Transfers;
 using Wallet.Application.Abstractions.Users;
+using Wallet.Infrastructure.Authentication;
 using Wallet.Infrastructure.Persistence;
 using Wallet.Infrastructure.Persistence.Idempotency;
 using Wallet.Infrastructure.Persistence.Repositories;
@@ -26,6 +27,8 @@ namespace Wallet.Infrastructure
             services.AddDbContext<WalletDbContext>(options =>
                 options.UseNpgsql(configuration.GetConnectionString("WalletDb")));
 
+            services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+            services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
             services.AddScoped<IAccountRepository, AccountRepository>();
             services.AddScoped<IScheduledTransferRepository, ScheduledTransferRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
