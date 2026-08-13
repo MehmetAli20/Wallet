@@ -35,6 +35,7 @@ namespace Wallet.Infrastructure
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<IIdempotencyStore, IdempotencyStore>();
             services.AddScoped<IReconciliationRepository, ReconciliationRepository>();
+            services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
 
             return services;          
         }

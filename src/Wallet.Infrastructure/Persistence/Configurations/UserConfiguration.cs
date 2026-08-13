@@ -24,6 +24,11 @@ namespace Wallet.Infrastructure.Persistence.Configurations
             builder.Property(x => x.Role)
                 .HasConversion<string>()
                 .HasMaxLength(20);
+            builder.Property(e => e.Email)
+                .IsRequired()
+                .HasMaxLength(254);
+            builder.HasIndex(e => e.Email)
+                .IsUnique();
         }
     }
 }

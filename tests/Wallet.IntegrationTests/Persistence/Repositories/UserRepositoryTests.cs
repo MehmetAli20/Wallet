@@ -23,7 +23,7 @@ public class UserRepositoryTests : IClassFixture<PostgresFixture>
             var repo = new UserRepository(context);
             var unitOfWork = new UnitOfWork(context);
 
-            await repo.AddAsync(new User(id, "Ahmet", "hash", UserRole.User));
+            await repo.AddAsync(new User(id, "Ahmet", "test0@test.com", "hash", UserRole.User));
             await unitOfWork.SaveChangesAsync();
         }
 
@@ -35,6 +35,7 @@ public class UserRepositoryTests : IClassFixture<PostgresFixture>
             found.Should().NotBeNull();
             found!.Id.Should().Be(id);
             found.Username.Should().Be("ahmet");
+            found.Email.Should().Be("test0@test.com");
         }
     }
 
@@ -48,7 +49,7 @@ public class UserRepositoryTests : IClassFixture<PostgresFixture>
             var repo = new UserRepository(context);
             var unitOfWork = new UnitOfWork(context);
 
-            await repo.AddAsync(new User(id, "Mehmet", "hash", UserRole.User));
+            await repo.AddAsync(new User(id, "Mehmet", "test1@test.com", "hash", UserRole.User));
             await unitOfWork.SaveChangesAsync();
         }
 
@@ -70,7 +71,7 @@ public class UserRepositoryTests : IClassFixture<PostgresFixture>
             var repo = new UserRepository(context);
             var unitOfWork = new UnitOfWork(context);
 
-            await repo.AddAsync(new User(Guid.NewGuid(), "Zeynep", "hash", UserRole.User));
+            await repo.AddAsync(new User(Guid.NewGuid(), "Zeynep", "test2@test.com", "hash", UserRole.User));
             await unitOfWork.SaveChangesAsync();
         }
 
@@ -79,7 +80,7 @@ public class UserRepositoryTests : IClassFixture<PostgresFixture>
             var repo = new UserRepository(context);
             var unitOfWork = new UnitOfWork(context);
 
-            await repo.AddAsync(new User(Guid.NewGuid(), "zeynep", "hash", UserRole.User));
+            await repo.AddAsync(new User(Guid.NewGuid(), "zeynep", "test2@test.com", "hash", UserRole.User));
 
             var act = async () => await unitOfWork.SaveChangesAsync();
 

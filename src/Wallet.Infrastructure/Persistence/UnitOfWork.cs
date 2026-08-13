@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Wallet.Application.Abstractions;
 using Wallet.Application.Abstractions.Exceptions;
 
@@ -22,6 +23,10 @@ namespace Wallet.Infrastructure.Persistence
             catch (DbUpdateConcurrencyException ex)
             {
                 throw new ConcurrencyConflictException("A concurrent modification was detected.", ex);
+            }
+            catch(DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: "23505" })
+            {
+                throw new UniqueConstraintViolationException("A record with the same unique value already exists", ex);
             }
         }
     }

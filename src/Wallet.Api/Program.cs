@@ -59,10 +59,12 @@ if (app.Environment.IsDevelopment())
     ?? throw new InvalidOperationException("Seed:AdminUsername is not configured.");
     var seedPassword = builder.Configuration["Seed:AdminPassword"]
         ?? throw new InvalidOperationException("Seed:AdminPassword is not configured.");
+    var seedEmail = builder.Configuration["Seed:AdminEmail"]
+        ?? throw new InvalidOperationException("Seed:AdminEmail is not configured.");
 
     using var scope = app.Services.CreateScope();
     var seeder = scope.ServiceProvider.GetRequiredService<AdminUserSeeder>();
-    await seeder.SeedAsync(seedUsername, seedPassword);    
+    await seeder.SeedAsync(username:seedUsername, email:seedEmail, password:seedPassword);
 }
 
 app.UseExceptionHandler();

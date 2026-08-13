@@ -1,5 +1,4 @@
-﻿using BCrypt.Net;
-using MediatR;
+﻿using MediatR;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -12,24 +11,25 @@ namespace Wallet.Application.Users.Login
     {
         private readonly IUserRepository _userRepository;
         private readonly IJwtTokenGenerator _tokenGenerator;
+        private readonly IPasswordHasher _passwordHasher;
 
-        public LoginCommandHandler(IUserRepository userRepository, IJwtTokenGenerator tokenGenerator)
+        public LoginCommandHandler(IUserRepository userRepository, IJwtTokenGenerator tokenGenerator, IPasswordHasher passwordHasher)
         {
             _userRepository = userRepository;
             _tokenGenerator = tokenGenerator;
+            _passwordHasher = passwordHasher;
         }
 
         public async Task<string> Handle(LoginCommand request, CancellationToken cancellationToken)
         {
             var user = await _userRepository.GetByUsernameAsync(request.Username, cancellationToken);
 
-            if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash)) 
+            if (user is null || !_passwordHasher.Verify(request.Password, user.PasswordHash)) 
             {
                 throw new InvalidCredentialsException();
             }
 
             return _tokenGenerator.GenerateToken(user);
-
         }
     }
 }

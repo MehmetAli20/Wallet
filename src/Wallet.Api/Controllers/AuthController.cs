@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Wallet.Api.Contracts.Users;
 using Wallet.Application.Users.Login;
+using Wallet.Application.Users.Register;
 
 namespace Wallet.Api.Controllers
 {
@@ -25,6 +26,15 @@ namespace Wallet.Api.Controllers
             var token = await _sender.Send(new LoginCommand(loginRequest.Username, loginRequest.Password), cancellationToken);
 
             return new LoginResponse(token);
+        }
+
+        [AllowAnonymous]
+        [HttpPost("register")]
+        public async Task<ActionResult<RegisterResponse>> Register(RegisterRequest registerRequest, CancellationToken cancellationToken)
+        {
+            var userId = await _sender.Send(new RegisterCommand(registerRequest.Username, registerRequest.Email, registerRequest.Password), cancellationToken);
+            
+            return StatusCode(StatusCodes.Status201Created, new RegisterResponse(userId));
         }
     }
 }

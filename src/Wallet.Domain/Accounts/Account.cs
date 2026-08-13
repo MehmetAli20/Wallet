@@ -8,14 +8,20 @@ namespace Wallet.Domain.Accounts
         private readonly List<LedgerEntry> _entries = new();
 
         public Guid Id { get; private set; }
+        public Guid OwnerId { get; private set; }
         public Money Balance { get; private set; }
         public IReadOnlyList<LedgerEntry> Entries => _entries.AsReadOnly();
 
-        public Account(Guid id, Money openingBalance)
+        public Account(Guid id, Guid ownerId, Money openingBalance)
         {
             if (id == Guid.Empty)
             {
                 throw new ArgumentException("Account Id cannot be empty.", nameof(id));
+            }
+
+            if (ownerId == Guid.Empty)
+            {
+                throw new ArgumentException("Owner Id cannot be empty.", nameof(ownerId));
             }
 
             if (openingBalance is null)
@@ -29,6 +35,7 @@ namespace Wallet.Domain.Accounts
             }
 
             Id = id;
+            OwnerId = ownerId;
             Balance = openingBalance;
         }
 

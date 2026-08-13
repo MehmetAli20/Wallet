@@ -11,7 +11,7 @@ namespace Wallet.UnitTests.Domain.Transfers
         private readonly TransferService _service = new();
 
         private static Account NewAccount(decimal balance, string currency = "USD") =>
-            new(Guid.NewGuid(), new Money(balance, currency));
+            new(Guid.NewGuid(), Guid.NewGuid(), new Money(balance, currency));
 
         [Fact]
         public void Transfer_WithValidInput_MovesMoneyBetweenAccounts()
@@ -139,6 +139,9 @@ namespace Wallet.UnitTests.Domain.Transfers
 
             act.Should().Throw<CurrencyMismatchException>();
             source.Balance.Should().Be(new Money(100m, "USD"));
+            destination.Balance.Should().Be(new Money(30m, "USD"));
+            source.Entries.Should().BeEmpty();
+            destination.Entries.Should().BeEmpty();
         }
     }
 }

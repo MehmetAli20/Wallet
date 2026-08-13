@@ -30,5 +30,11 @@ namespace Wallet.Infrastructure.Persistence.Repositories.UserRepository
             //Bizde Guid id'yi ben üretiyorum (Guid.NewGuid()),
             //yani DB'ye gitmeye gerek yok — senkron Add de tamamen yeterliydi.
         }
+
+        public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
+        {
+            var normalizedEmail = User.NormalizeEmail(email);
+            return await _context.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail, cancellationToken);
+        }
     }
 }

@@ -35,6 +35,9 @@ namespace Wallet.Api.Middleware
                 ArgumentException => (StatusCodes.Status400BadRequest, "Invalid input"),
                 ConcurrencyConflictException => (StatusCodes.Status409Conflict, "Concurrent modification"),
                 InvalidCredentialsException => (StatusCodes.Status401Unauthorized, "Invalid credentials"),
+                UsernameAlreadyExistsException => (StatusCodes.Status409Conflict, "Username already exists"),
+                UniqueConstraintViolationException => (StatusCodes.Status409Conflict, "Conflict"),
+                EmailAlreadyExistsException => (StatusCodes.Status409Conflict, "Email already exists"),
                 _ => (0, string.Empty)
             };
             if(statusCode == 0)

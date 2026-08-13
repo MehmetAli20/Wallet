@@ -34,8 +34,8 @@ namespace Wallet.IntegrationTests.Transfers
             await using var context = _fixture.CreateContext();
             var repository = new AccountRepository(context);
 
-            await repository.AddAsync(new Account(sourceId, new Money(sourceBalance, "USD")));
-            await repository.AddAsync(new Account(destinationId, new Money(destinationBalance, "USD")));
+            await repository.AddAsync(new Account(sourceId, Guid.NewGuid(), new Money(sourceBalance, "USD")));
+            await repository.AddAsync(new Account(destinationId, Guid.NewGuid(), new Money(destinationBalance, "USD")));
             
             await new UnitOfWork(context).SaveChangesAsync();
         }

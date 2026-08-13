@@ -17,13 +17,14 @@ public class AccountRepositoryTests : IClassFixture<PostgresFixture>
     public async Task Account_WithLedgerEntries_RoundTripsThroughDatabase()
     {
         var id = Guid.NewGuid();
+        var ownerId = Guid.NewGuid();
 
         // YAZ — kendi context'inde
         await using (var context = _fixture.CreateContext())
         {
             var repo = new AccountRepository(context);
             var unitOfWork = new UnitOfWork(context);
-            var account = new Account(id, new Money(100m, "USD"));
+            var account = new Account(id, ownerId, new Money(100m, "USD"));
             account.Deposit(new Money(50m, "USD"));
             account.Withdraw(new Money(20m, "USD"));
 
