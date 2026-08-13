@@ -24,7 +24,10 @@ namespace Wallet.Application.Users.Login
         {
             var user = await _userRepository.GetByUsernameAsync(request.Username, cancellationToken);
 
-            if (user is null || !_passwordHasher.Verify(request.Password, user.PasswordHash)) 
+            var passwordHash = user?.PasswordHash ?? _passwordHasher.DummyHash;
+            var passwordIsValid = _passwordHasher.Verify(request.Password, passwordHash);
+
+            if (user is null || !passwordIsValid)
             {
                 throw new InvalidCredentialsException();
             }

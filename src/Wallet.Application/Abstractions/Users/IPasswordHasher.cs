@@ -8,5 +8,6 @@ namespace Wallet.Application.Abstractions.Users
     {
         string Hash(string password);
         bool Verify(string password, string passwordHash);
+        string DummyHash { get; }
     }
 }

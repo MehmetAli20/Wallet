@@ -9,6 +9,11 @@ namespace Wallet.Infrastructure.Authentication
     {
         private const int WorkFactor = 12;
 
+        private static readonly string _dummyHash =
+            BCrypt.Net.BCrypt.HashPassword("timing-equalization-dummy", WorkFactor);
+
+        public string DummyHash => _dummyHash;
+
         public string Hash(string password)
         {
             return BCrypt.Net.BCrypt.HashPassword(password, WorkFactor);
