@@ -16,6 +16,7 @@ namespace Wallet.Domain.Users
         {
             Username = null!;
             PasswordHash = null!;
+            Email = null!;
         }
 
         public User(Guid id, string username, string email, string passwordHash, UserRole role)
