@@ -19,7 +19,6 @@ public class AccountRepositoryTests : IClassFixture<PostgresFixture>
         var id = Guid.NewGuid();
         var ownerId = Guid.NewGuid();
 
-        // YAZ — kendi context'inde
         await using (var context = _fixture.CreateContext())
         {
             var repo = new AccountRepository(context);
@@ -32,7 +31,6 @@ public class AccountRepositoryTests : IClassFixture<PostgresFixture>
             await unitOfWork.SaveChangesAsync();
         }
 
-        // OKU — TAMAMEN YENİ context'te
         await using (var context = _fixture.CreateContext())
         {
             var repo = new AccountRepository(context);

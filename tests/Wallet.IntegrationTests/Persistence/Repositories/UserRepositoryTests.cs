@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Wallet.Application.Abstractions.Exceptions;
 using Wallet.Domain.Users;
 using Wallet.Infrastructure.Persistence;
 using Wallet.Infrastructure.Persistence.Repositories.UserRepository;
@@ -80,11 +81,61 @@ public class UserRepositoryTests : IClassFixture<PostgresFixture>
             var repo = new UserRepository(context);
             var unitOfWork = new UnitOfWork(context);
 
-            await repo.AddAsync(new User(Guid.NewGuid(), "zeynep", "test2@test.com", "hash", UserRole.User));
+            await repo.AddAsync(new User(Guid.NewGuid(), "zeynep", "test3@test.com", "hash", UserRole.User));
 
             var act = async () => await unitOfWork.SaveChangesAsync();
 
-            await act.Should().ThrowAsync<DbUpdateException>();
+            await act.Should().ThrowAsync<UniqueConstraintViolationException>();
+        }
+    }
+
+    [Fact]
+    public async Task GetByEmail_FindsUser_RegardlessOfCasing()
+    {
+        var id = Guid.NewGuid();
+
+        await using (var context = _fixture.CreateContext())
+        {
+            var repo = new UserRepository(context);
+            var unitOfWork = new UnitOfWork(context);
+
+            await repo.AddAsync(new User(id, "elif", "  Elif@Example.COM  ", "hash", UserRole.User));
+            await unitOfWork.SaveChangesAsync();
+        }
+
+        await using (var context = _fixture.CreateContext())
+        {
+            var repo = new UserRepository(context);
+            var found = await repo.GetByEmailAsync("ELIF@EXAMPLE.COM");
+
+            found.Should().NotBeNull();
+            found!.Id.Should().Be(id);
+            found.Email.Should().Be("elif@example.com");
+        }
+    }
+
+    [Fact]
+    public async Task AddingEmailThatDiffersOnlyByCasing_IsRejected()
+    {
+        await using (var context = _fixture.CreateContext())
+        {
+            var repo = new UserRepository(context);
+            var unitOfWork = new UnitOfWork(context);
+
+            await repo.AddAsync(new User(Guid.NewGuid(), "burak", "Burak@Example.com", "hash", UserRole.User));
+            await unitOfWork.SaveChangesAsync();
+        }
+
+        await using (var context = _fixture.CreateContext())
+        {
+            var repo = new UserRepository(context);
+            var unitOfWork = new UnitOfWork(context);
+
+            await repo.AddAsync(new User(Guid.NewGuid(), "burak2", "BURAK@example.COM", "hash", UserRole.User));
+
+            var act = async () => await unitOfWork.SaveChangesAsync();
+
+            await act.Should().ThrowAsync<UniqueConstraintViolationException>();
         }
     }
 }

@@ -15,6 +15,7 @@ namespace Wallet.UnitTests.Domain.Users
             var user = new User(id, "testuser","test@test.com", "hashedpassword", UserRole.User);
             user.Id.Should().Be(id);
             user.Username.Should().Be("testuser");
+            user.Email.Should().Be("test@test.com");
             user.PasswordHash.Should().Be("hashedpassword");
             user.Role.Should().Be(UserRole.User);
         }
@@ -69,11 +70,40 @@ namespace Wallet.UnitTests.Domain.Users
         }
 
         [Fact]
+        public void Constructor_WithNullEmail_Throws()
+        {
+            var act = () => new User(Guid.NewGuid(), "testuser", null!, "hashedpassword", UserRole.User);
+            act.Should().Throw<ArgumentException>();
+        }
+
+        [Fact]
+        public void Constructor_WithEmptyEmail_Throws()
+        {
+            var act = () => new User(Guid.NewGuid(), "testuser", string.Empty, "hashedpassword", UserRole.User);
+            act.Should().Throw<ArgumentException>();
+        }
+
+        [Fact]
+        public void Constructor_WithWhitespaceEmail_Throws()
+        {
+            var act = () => new User(Guid.NewGuid(), "testuser", "   ", "hashedpassword", UserRole.User);
+            act.Should().Throw<ArgumentException>();
+        }
+
+        [Fact]
         public void Constructor_NormalizesUsername()
         {
             var user = new User(Guid.NewGuid(), "  TestUser  ", "test@test.com", "hashedpassword", UserRole.User);
 
             user.Username.Should().Be("testuser");
+        }
+
+        [Fact]
+        public void Constructor_NormalizesEmail()
+        {
+            var user = new User(Guid.NewGuid(), "testuser", "  Test@Example.COM  ", "hashedpassword", UserRole.User);
+
+            user.Email.Should().Be("test@example.com");
         }
     }
 }
