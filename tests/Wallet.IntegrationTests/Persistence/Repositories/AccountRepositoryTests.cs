@@ -19,7 +19,7 @@ public class AccountRepositoryTests : IClassFixture<PostgresFixture>
         var id = Guid.NewGuid();
         var ownerId = Guid.NewGuid();
 
-        await using (var context = _fixture.CreateContext())
+        await using (var context = _fixture.CreateContext(TestCurrentUser.For(ownerId)))
         {
             var repo = new AccountRepository(context);
             var unitOfWork = new UnitOfWork(context);
@@ -31,7 +31,7 @@ public class AccountRepositoryTests : IClassFixture<PostgresFixture>
             await unitOfWork.SaveChangesAsync();
         }
 
-        await using (var context = _fixture.CreateContext())
+        await using (var context = _fixture.CreateContext(TestCurrentUser.For(ownerId)))
         {
             var repo = new AccountRepository(context);
             var loaded = await repo.GetByIdAsync(id);
@@ -41,6 +41,56 @@ public class AccountRepositoryTests : IClassFixture<PostgresFixture>
             loaded.Entries.Should().HaveCount(2);
             loaded.Entries[0].Type.Should().Be(LedgerEntryType.Credit);
             loaded.Entries[1].Type.Should().Be(LedgerEntryType.Debit);
+        }
+    }
+
+    [Fact]
+    public async Task GetById_ReturnsNull_ForAnotherUser()
+    {
+        var id = Guid.NewGuid();
+        var ownerId = Guid.NewGuid();
+        var otherUserId = Guid.NewGuid();
+
+        await using (var context = _fixture.CreateContext(TestCurrentUser.For(ownerId)))
+        {
+            var repo = new AccountRepository(context);
+            var unitOfWork = new UnitOfWork(context);
+
+            await repo.AddAsync(new Account(id, ownerId, new Money(100m, "USD")));
+            await unitOfWork.SaveChangesAsync();
+        }
+
+        await using (var context = _fixture.CreateContext(TestCurrentUser.For(otherUserId)))
+        {
+            var repo = new AccountRepository(context);
+            var loaded = await repo.GetByIdAsync(id);
+
+            loaded.Should().BeNull();
+        }
+    }
+
+    [Fact]
+    public async Task GetById_ReturnsAccount_ForSystemContext()
+    {
+        var id = Guid.NewGuid();
+        var ownerId = Guid.NewGuid();
+
+        await using (var context = _fixture.CreateContext(TestCurrentUser.For(ownerId)))
+        {
+            var repo = new AccountRepository(context);
+            var unitOfWork = new UnitOfWork(context);
+
+            await repo.AddAsync(new Account(id, ownerId, new Money(100m, "USD")));
+            await unitOfWork.SaveChangesAsync();
+        }
+
+        await using (var context = _fixture.CreateContext(TestCurrentUser.System))
+        {
+            var repo = new AccountRepository(context);
+            var loaded = await repo.GetByIdAsync(id);
+
+            loaded.Should().NotBeNull();
+            loaded!.OwnerId.Should().Be(ownerId);
         }
     }
 }

@@ -19,7 +19,7 @@ public class UserRepositoryTests : IClassFixture<PostgresFixture>
     {
         var id = Guid.NewGuid();
 
-        await using (var context = _fixture.CreateContext())
+        await using (var context = _fixture.CreateContext(TestCurrentUser.System))
         {
             var repo = new UserRepository(context);
             var unitOfWork = new UnitOfWork(context);
@@ -28,7 +28,7 @@ public class UserRepositoryTests : IClassFixture<PostgresFixture>
             await unitOfWork.SaveChangesAsync();
         }
 
-        await using (var context = _fixture.CreateContext())
+        await using (var context = _fixture.CreateContext(TestCurrentUser.System))
         {
             var repo = new UserRepository(context);
             var found = await repo.GetByUsernameAsync("AHMET");
@@ -45,7 +45,7 @@ public class UserRepositoryTests : IClassFixture<PostgresFixture>
     {
         var id = Guid.NewGuid();
 
-        await using (var context = _fixture.CreateContext())
+        await using (var context = _fixture.CreateContext(TestCurrentUser.System))
         {
             var repo = new UserRepository(context);
             var unitOfWork = new UnitOfWork(context);
@@ -54,7 +54,7 @@ public class UserRepositoryTests : IClassFixture<PostgresFixture>
             await unitOfWork.SaveChangesAsync();
         }
 
-        await using (var context = _fixture.CreateContext())
+        await using (var context = _fixture.CreateContext(TestCurrentUser.System))
         {
             var repo = new UserRepository(context);
             var found = await repo.GetByUsernameAsync("  MeHmEt  ");
@@ -67,7 +67,7 @@ public class UserRepositoryTests : IClassFixture<PostgresFixture>
     [Fact]
     public async Task AddingUsernameThatDiffersOnlyByCasing_IsRejected()
     {
-        await using (var context = _fixture.CreateContext())
+        await using (var context = _fixture.CreateContext(TestCurrentUser.System))
         {
             var repo = new UserRepository(context);
             var unitOfWork = new UnitOfWork(context);
@@ -76,7 +76,7 @@ public class UserRepositoryTests : IClassFixture<PostgresFixture>
             await unitOfWork.SaveChangesAsync();
         }
 
-        await using (var context = _fixture.CreateContext())
+        await using (var context = _fixture.CreateContext(TestCurrentUser.System))
         {
             var repo = new UserRepository(context);
             var unitOfWork = new UnitOfWork(context);
@@ -94,7 +94,7 @@ public class UserRepositoryTests : IClassFixture<PostgresFixture>
     {
         var id = Guid.NewGuid();
 
-        await using (var context = _fixture.CreateContext())
+        await using (var context = _fixture.CreateContext(TestCurrentUser.System))
         {
             var repo = new UserRepository(context);
             var unitOfWork = new UnitOfWork(context);
@@ -103,7 +103,7 @@ public class UserRepositoryTests : IClassFixture<PostgresFixture>
             await unitOfWork.SaveChangesAsync();
         }
 
-        await using (var context = _fixture.CreateContext())
+        await using (var context = _fixture.CreateContext(TestCurrentUser.System))
         {
             var repo = new UserRepository(context);
             var found = await repo.GetByEmailAsync("ELIF@EXAMPLE.COM");
@@ -117,7 +117,7 @@ public class UserRepositoryTests : IClassFixture<PostgresFixture>
     [Fact]
     public async Task AddingEmailThatDiffersOnlyByCasing_IsRejected()
     {
-        await using (var context = _fixture.CreateContext())
+        await using (var context = _fixture.CreateContext(TestCurrentUser.System))
         {
             var repo = new UserRepository(context);
             var unitOfWork = new UnitOfWork(context);
@@ -126,7 +126,7 @@ public class UserRepositoryTests : IClassFixture<PostgresFixture>
             await unitOfWork.SaveChangesAsync();
         }
 
-        await using (var context = _fixture.CreateContext())
+        await using (var context = _fixture.CreateContext(TestCurrentUser.System))
         {
             var repo = new UserRepository(context);
             var unitOfWork = new UnitOfWork(context);

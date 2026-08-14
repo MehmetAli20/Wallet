@@ -8,6 +8,7 @@
 
 # Kubernetes secrets (contain real credentials, mirror .env treatment)
 k8s/postgres-secret.yaml
+k8s/jwt-secret.yaml
 
 # User-specific files
 *.rsuser

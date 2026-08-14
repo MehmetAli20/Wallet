@@ -55,16 +55,27 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi().AllowAnonymous();
 
-    var seedUsername = builder.Configuration["Seed:AdminUsername"]
-    ?? throw new InvalidOperationException("Seed:AdminUsername is not configured.");
-    var seedPassword = builder.Configuration["Seed:AdminPassword"]
-        ?? throw new InvalidOperationException("Seed:AdminPassword is not configured.");
-    var seedEmail = builder.Configuration["Seed:AdminEmail"]
-        ?? throw new InvalidOperationException("Seed:AdminEmail is not configured.");
+    var seedUsername = builder.Configuration["Seed:AdminUsername"];
+    var seedEmail = builder.Configuration["Seed:AdminEmail"];
+    var seedPassword = builder.Configuration["Seed:AdminPassword"];
 
-    using var scope = app.Services.CreateScope();
-    var seeder = scope.ServiceProvider.GetRequiredService<AdminUserSeeder>();
-    await seeder.SeedAsync(username:seedUsername, email:seedEmail, password:seedPassword);
+    var seedValues = new[] { seedUsername, seedEmail, seedPassword };
+
+    if (seedValues.All(string.IsNullOrWhiteSpace))
+    {
+        app.Logger.LogInformation("No admin seed configuration found, skipping seed.");
+    }
+    else if (seedValues.Any(string.IsNullOrWhiteSpace))
+    {
+        throw new InvalidOperationException(
+            "Admin seed is partially configured. Seed:AdminUsername, Seed:AdminEmail and Seed:AdminPassword must all be set, or none of them.");
+    }
+    else
+    {
+        using var scope = app.Services.CreateScope();
+        var seeder = scope.ServiceProvider.GetRequiredService<AdminUserSeeder>();
+        await seeder.SeedAsync(seedUsername!, seedEmail!, seedPassword!);
+    }
 }
 
 app.UseExceptionHandler();

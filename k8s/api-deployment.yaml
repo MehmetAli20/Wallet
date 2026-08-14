@@ -38,6 +38,15 @@ spec:
                   key: POSTGRES_DB
             - name: ConnectionStrings__WalletDb
               value: "Host=postgres;Port=5432;Database=$(POSTGRES_DB);Username=$(POSTGRES_USER);Password=$(POSTGRES_PASSWORD)"
+            - name: Jwt__SigningKey
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-secret
+                  key: Jwt__SigningKey
+            - name: Jwt__Issuer
+              value: wallet-api
+            - name: Jwt__Audience
+              value: wallet-clients
           readinessProbe:
             httpGet:
               path: /health

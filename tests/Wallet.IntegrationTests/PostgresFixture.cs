@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Testcontainers.PostgreSql;
+using Wallet.Application.Abstractions.Users;
 using Wallet.Infrastructure.Persistence;
 
 namespace Wallet.IntegrationTests
@@ -18,7 +19,7 @@ namespace Wallet.IntegrationTests
         {
             await _container.StartAsync();
 
-            await using var context = CreateContext();
+            await using var context = CreateContext(TestCurrentUser.System);
             await context.Database.MigrateAsync();
         }
 
@@ -27,13 +28,13 @@ namespace Wallet.IntegrationTests
             await _container.DisposeAsync();
         }
 
-        public WalletDbContext CreateContext()
+        public WalletDbContext CreateContext(ICurrentUser currentUser)
         {
             var options = new DbContextOptionsBuilder<WalletDbContext>()
                 .UseNpgsql(ConnectionString)
                 .Options;
 
-            return new WalletDbContext(options);
+            return new WalletDbContext(options, currentUser);
         }   
     }
 }

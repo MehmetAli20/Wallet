@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Wallet.Application.Abstractions.Users;
 using Wallet.Domain.Accounts;
 using Wallet.Domain.Transfers;
 using Wallet.Domain.Users;
@@ -10,10 +11,11 @@ namespace Wallet.Infrastructure.Persistence
 {
     public class WalletDbContext : DbContext
     {
-        public WalletDbContext(DbContextOptions<WalletDbContext> options) 
+        private readonly ICurrentUser _currentUser;
+        public WalletDbContext(DbContextOptions<WalletDbContext> options, ICurrentUser currentUser) 
             : base(options)
         {
-
+            _currentUser = currentUser;
         }
 
         public DbSet<Account> Accounts => Set<Account>();
@@ -23,6 +25,8 @@ namespace Wallet.Infrastructure.Persistence
         protected override void OnModelCreating(ModelBuilder modelbuilder)
         {
             modelbuilder.ApplyConfigurationsFromAssembly(typeof(WalletDbContext).Assembly);
+            modelbuilder.Entity<Account>()
+                .HasQueryFilter(a => _currentUser.IsSystem || a.OwnerId == _currentUser.UserId);
             base.OnModelCreating(modelbuilder);
         }
     }
