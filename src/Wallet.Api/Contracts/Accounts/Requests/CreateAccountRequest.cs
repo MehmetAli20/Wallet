@@ -1,4 +1,4 @@
-﻿namespace Wallet.Api.Contracts.Accounts
+﻿namespace Wallet.Api.Contracts.Accounts.Requests
 {
     public record CreateAccountRequest(decimal Amount, string Currency);
 }

@@ -1,4 +1,5 @@
-﻿using Wallet.Domain.Accounts;
+﻿using Wallet.Api.Contracts.Accounts.Responses;
+using Wallet.Domain.Accounts;
 
 namespace Wallet.Api.Contracts.Accounts
 {
@@ -18,5 +19,10 @@ namespace Wallet.Api.Contracts.Accounts
                 entry.Amount.Currency,
                 entry.Sequence,
                 entry.OccurredAt);
+
+        public static AccountListResponse ToListResponse(this Account account) => 
+            new(account.Id, 
+                account.Balance.Amount, 
+                account.Balance.Currency);
     }
 }

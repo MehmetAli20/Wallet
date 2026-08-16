@@ -93,4 +93,38 @@ public class AccountRepositoryTests : IClassFixture<PostgresFixture>
             loaded!.OwnerId.Should().Be(ownerId);
         }
     }
+
+    [Fact]
+    public async Task GetAll_ReturnsOnlyCurrentUsersAccounts()
+    {
+        var ownerId = Guid.NewGuid();
+        var otherOwnerId = Guid.NewGuid();
+
+        await using (var context = _fixture.CreateContext(TestCurrentUser.For(ownerId)))
+        {
+            var repo = new AccountRepository(context);
+            var unitOfWork = new UnitOfWork(context);
+
+            await repo.AddAsync(new Account(Guid.NewGuid(), ownerId, new Money(100m, "USD")));
+            await repo.AddAsync(new Account(Guid.NewGuid(), ownerId, new Money(200m, "EUR")));
+            await unitOfWork.SaveChangesAsync();
+        }
+
+        await using (var context = _fixture.CreateContext(TestCurrentUser.For(otherOwnerId)))
+        {
+            var repo = new AccountRepository(context);
+            var unitOfWork = new UnitOfWork(context);
+
+            await repo.AddAsync(new Account(Guid.NewGuid(), otherOwnerId, new Money(50m, "USD")));
+            await unitOfWork.SaveChangesAsync();
+        }
+
+        await using (var context = _fixture.CreateContext(TestCurrentUser.For(ownerId)))
+        {
+            var accounts = await new AccountRepository(context).GetAllAsync();
+
+            accounts.Should().HaveCount(2);
+            accounts.Should().OnlyContain(a => a.OwnerId == ownerId);
+        }
+    }
 }

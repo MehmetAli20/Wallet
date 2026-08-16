@@ -31,5 +31,12 @@ namespace Wallet.Infrastructure.Persistence.Repositories.AccountRepository
             //Bizde Guid id'yi ben üretiyorum (Guid.NewGuid()),
             //yani DB'ye gitmeye gerek yok — senkron Add de tamamen yeterliydi.
         }
+
+        public async Task<IReadOnlyList<Account>> GetAllAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Accounts
+                .OrderBy(a => a.Balance.Currency)
+                .ToListAsync();
+        }
     }
 }

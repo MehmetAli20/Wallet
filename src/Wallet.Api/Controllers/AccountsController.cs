@@ -2,10 +2,13 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Wallet.Api.Contracts.Accounts;
+using Wallet.Api.Contracts.Accounts.Requests;
+using Wallet.Api.Contracts.Accounts.Responses;
 using Wallet.Application.Abstractions;
 using Wallet.Application.Abstractions.Accounts;
 using Wallet.Application.Accounts.CreateAccount;
 using Wallet.Application.Accounts.GetAccountById;
+using Wallet.Application.Accounts.GetMyAccounts;
 using Wallet.Domain.Accounts;
 using Wallet.Domain.Common;
 
@@ -39,6 +42,14 @@ namespace Wallet.Api.Controllers
                 return NotFound();
             }
             return account.ToResponse();
+        }
+
+        [HttpGet]
+        public async Task<ActionResult<IReadOnlyList<AccountListResponse>>> GetAllMyAccounts(CancellationToken cancellationToken)
+        {
+            var accounts = await _sender.Send(new GetMyAccountsQuery(), cancellationToken);
+
+            return Ok(accounts.Select(account => account.ToListResponse()).ToList());
         }
     }
 }
