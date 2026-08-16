@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Wallet.Application.Abstractions;
 using Wallet.Domain.Transfers;
 
@@ -10,5 +10,5 @@ namespace Wallet.Application.Transfers.ScheduleTransfer
         decimal Amount,
         string Currency,
         DateTimeOffset ScheduledFor,
-        string IdempotencyKey) : IRequest<ScheduledTransfer>, IIdempotentRequest;
+        string IdempotencyKey) : IRequest<Guid>, IIdempotentRequest;
 }

@@ -12,7 +12,7 @@ using Wallet.Domain.Transfers;
 
 namespace Wallet.Application.Transfers.ScheduleTransfer
 {
-    public class ScheduleTransferCommandHandler : IRequestHandler<ScheduleTransferCommand, ScheduledTransfer>
+    public class ScheduleTransferCommandHandler : IRequestHandler<ScheduleTransferCommand, Guid>
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IScheduledTransferRepository _scheduledTransfers;
@@ -27,7 +27,7 @@ namespace Wallet.Application.Transfers.ScheduleTransfer
             _accounts = accounts;
         }
 
-        public async Task<ScheduledTransfer> Handle(ScheduleTransferCommand request, CancellationToken cancellationToken)
+        public async Task<Guid> Handle(ScheduleTransferCommand request, CancellationToken cancellationToken)
         {
 
             _ = await _accounts.GetByIdAsync(request.SourceAccountId, cancellationToken) ?? throw new AccountNotFoundException(request.SourceAccountId);
@@ -43,7 +43,7 @@ namespace Wallet.Application.Transfers.ScheduleTransfer
 
             await _scheduledTransfers.AddAsync(scheduledTransfer, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            return scheduledTransfer;
+            return scheduledTransfer.Id;
         }
     }
 }

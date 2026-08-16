@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Wallet.Application.Abstractions;
 using Wallet.Application.Abstractions.Accounts;
 
@@ -13,9 +13,24 @@ public class IdempotencyStore : IIdempotencyStore
         _context = context;
     }
 
-    public Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default) =>
-        _context.Set<IdempotencyRecord>().AnyAsync(r => r.Key == key, cancellationToken);
+    public async Task<IdempotencyLookup> FindAsync(string key, CancellationToken cancellationToken = default)
+    {
+        var record = await _context.Set<IdempotencyRecord>()
+            .FirstOrDefaultAsync(r => r.Key == key, cancellationToken);
+
+        return record is null
+            ? new IdempotencyLookup(false, null)
+            : new IdempotencyLookup(true, record.Response);
+    }
 
     public void Stage(string key, string requestName) =>
         _context.Add(new IdempotencyRecord(key, requestName, DateTimeOffset.UtcNow));
+
+    public async Task SetResponseAsync(string key, string response, CancellationToken cancellationToken = default)
+    {
+        var record = await _context.Set<IdempotencyRecord>().FindAsync([key], cancellationToken)
+            ?? throw new InvalidOperationException($"Idempotency record '{key}' was not found.");
+
+        record.SetResponse(response);
+    }
 }

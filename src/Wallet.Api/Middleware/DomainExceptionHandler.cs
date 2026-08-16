@@ -37,6 +37,7 @@ namespace Wallet.Api.Middleware
                 InvalidCredentialsException => (StatusCodes.Status401Unauthorized, "Invalid credentials"),
                 UsernameAlreadyExistsException => (StatusCodes.Status409Conflict, "Username already exists"),
                 UniqueConstraintViolationException => (StatusCodes.Status409Conflict, "Conflict"),
+                IdempotentResponseUnavailableException => (StatusCodes.Status409Conflict, "Idempotent response unavailable"),
                 EmailAlreadyExistsException => (StatusCodes.Status409Conflict, "Email already exists"),
                 _ => (0, string.Empty)
             };

@@ -18,12 +18,12 @@ namespace Wallet.Api.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<ScheduledTransferResponse>> Schedule(
+        public async Task<ActionResult<ScheduleTransferResponse>> Schedule(
             ScheduledTransferRequest request,
             [FromHeader(Name ="Idempotency-Key")] string idempotencyKey,
             CancellationToken cancellationToken)
         {
-            var scheduledTransfer = await _sender.Send(new ScheduleTransferCommand(
+            var scheduledTransferId = await _sender.Send(new ScheduleTransferCommand(
                 request.SourceAccountId,
                 request.DestinationAccountId,
                 request.Amount,
@@ -32,7 +32,7 @@ namespace Wallet.Api.Controllers
                 idempotencyKey
             ), cancellationToken);
 
-            return Ok(scheduledTransfer.ToResponse());
+            return StatusCode(StatusCodes.Status201Created, new ScheduleTransferResponse(scheduledTransferId));
         }
     }
 }
