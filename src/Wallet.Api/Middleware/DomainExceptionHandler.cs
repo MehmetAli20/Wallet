@@ -29,7 +29,6 @@ namespace Wallet.Api.Middleware
             var (statusCode, title) = exception switch
             {
                 AccountNotFoundException => (StatusCodes.Status404NotFound, "Account not found"),
-                InsufficientFundsException => (StatusCodes.Status400BadRequest, "Insufficient funds"),
                 CurrencyMismatchException => (StatusCodes.Status400BadRequest, "Currency mismatch"),
                 InvalidTransferException => (StatusCodes.Status400BadRequest, "Invalid transfer"),
                 ArgumentException => (StatusCodes.Status400BadRequest, "Invalid input"),

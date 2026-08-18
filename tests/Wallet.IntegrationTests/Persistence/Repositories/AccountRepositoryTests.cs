@@ -23,9 +23,9 @@ public class AccountRepositoryTests : IClassFixture<PostgresFixture>
         {
             var repo = new AccountRepository(context);
             var unitOfWork = new UnitOfWork(context);
-            var account = new Account(id, ownerId, new Money(100m, "USD"));
-            account.Deposit(new Money(50m, "USD"));
-            account.Withdraw(new Money(20m, "USD"));
+            var account = new Account(id, ownerId, "USD");
+            account.Credit(new Money(50m, "USD"));
+            account.Debit(new Money(20m, "USD"));
 
             await repo.AddAsync(account);
             await unitOfWork.SaveChangesAsync();
@@ -37,7 +37,7 @@ public class AccountRepositoryTests : IClassFixture<PostgresFixture>
             var loaded = await repo.GetByIdAsync(id);
 
             loaded.Should().NotBeNull();
-            loaded!.Balance.Should().Be(new Money(130m, "USD"));
+            loaded!.Balance.Should().Be(new Money(30m, "USD"));
             loaded.Entries.Should().HaveCount(2);
             loaded.Entries[0].Type.Should().Be(LedgerEntryType.Credit);
             loaded.Entries[1].Type.Should().Be(LedgerEntryType.Debit);
@@ -56,7 +56,7 @@ public class AccountRepositoryTests : IClassFixture<PostgresFixture>
             var repo = new AccountRepository(context);
             var unitOfWork = new UnitOfWork(context);
 
-            await repo.AddAsync(new Account(id, ownerId, new Money(100m, "USD")));
+            await repo.AddAsync(new Account(id, ownerId, "USD"));
             await unitOfWork.SaveChangesAsync();
         }
 
@@ -80,7 +80,7 @@ public class AccountRepositoryTests : IClassFixture<PostgresFixture>
             var repo = new AccountRepository(context);
             var unitOfWork = new UnitOfWork(context);
 
-            await repo.AddAsync(new Account(id, ownerId, new Money(100m, "USD")));
+            await repo.AddAsync(new Account(id, ownerId, "USD"));
             await unitOfWork.SaveChangesAsync();
         }
 
@@ -105,8 +105,8 @@ public class AccountRepositoryTests : IClassFixture<PostgresFixture>
             var repo = new AccountRepository(context);
             var unitOfWork = new UnitOfWork(context);
 
-            await repo.AddAsync(new Account(Guid.NewGuid(), ownerId, new Money(100m, "USD")));
-            await repo.AddAsync(new Account(Guid.NewGuid(), ownerId, new Money(200m, "EUR")));
+            await repo.AddAsync(new Account(Guid.NewGuid(), ownerId, "USD"));
+            await repo.AddAsync(new Account(Guid.NewGuid(), ownerId, "EUR"));
             await unitOfWork.SaveChangesAsync();
         }
 
@@ -115,7 +115,7 @@ public class AccountRepositoryTests : IClassFixture<PostgresFixture>
             var repo = new AccountRepository(context);
             var unitOfWork = new UnitOfWork(context);
 
-            await repo.AddAsync(new Account(Guid.NewGuid(), otherOwnerId, new Money(50m, "USD")));
+            await repo.AddAsync(new Account(Guid.NewGuid(), otherOwnerId, "USD"));
             await unitOfWork.SaveChangesAsync();
         }
 

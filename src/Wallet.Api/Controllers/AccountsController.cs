@@ -2,11 +2,9 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Wallet.Api.Contracts.Accounts;
-using Wallet.Api.Contracts.Accounts.Requests;
 using Wallet.Api.Contracts.Accounts.Responses;
 using Wallet.Application.Abstractions;
 using Wallet.Application.Abstractions.Accounts;
-using Wallet.Application.Accounts.CreateAccount;
 using Wallet.Application.Accounts.GetAccountById;
 using Wallet.Application.Accounts.GetMyAccounts;
 using Wallet.Domain.Accounts;
@@ -24,13 +22,6 @@ namespace Wallet.Api.Controllers
         public AccountsController(ISender sender)
         {
             _sender = sender;
-        }
-
-        [HttpPost]
-        public async Task<ActionResult<AccountResponse>> Create(CreateAccountRequest request, CancellationToken cancellationToken)
-        {
-            var account = await _sender.Send(new CreateAccountCommand(request.Amount, request.Currency), cancellationToken);
-            return CreatedAtAction(nameof(GetById), new { id = account.Id }, account.ToResponse());
         }
 
         [HttpGet("{id:guid}")]

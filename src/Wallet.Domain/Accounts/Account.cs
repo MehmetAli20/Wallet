@@ -1,5 +1,4 @@
 ﻿using Wallet.Domain.Common;
-using Wallet.Domain.Exceptions;
 
 namespace Wallet.Domain.Accounts
 {
@@ -12,7 +11,7 @@ namespace Wallet.Domain.Accounts
         public Money Balance { get; private set; }
         public IReadOnlyList<LedgerEntry> Entries => _entries.AsReadOnly();
 
-        public Account(Guid id, Guid ownerId, Money openingBalance)
+        public Account(Guid id, Guid ownerId, string currency)
         {
             if (id == Guid.Empty)
             {
@@ -24,19 +23,9 @@ namespace Wallet.Domain.Accounts
                 throw new ArgumentException("Owner Id cannot be empty.", nameof(ownerId));
             }
 
-            if (openingBalance is null)
-            {
-                throw new ArgumentNullException(nameof(openingBalance), "Opening balance cannot be null.");
-            }
-
-            if (openingBalance.Amount < 0)
-            {
-                throw new ArgumentException("Opening balance cannot be negative.", nameof(openingBalance));
-            }
-
             Id = id;
             OwnerId = ownerId;
-            Balance = openingBalance;
+            Balance = new Money(0m, currency);
         }
 
         private Account()
@@ -44,37 +33,32 @@ namespace Wallet.Domain.Accounts
             Balance = null!;
         }
 
-        public void Deposit(Money amount)
+        public void Credit(Money amount)
         {
             if (amount is null)
             {
-                throw new ArgumentNullException(nameof(amount), "Deposit amount cannot be null.");
+                throw new ArgumentNullException(nameof(amount), "Credit amount cannot be null.");
             }
 
             if (amount.Amount <= 0)
             {
-                throw new ArgumentException("Deposit amount must be positive", nameof(amount));
+                throw new ArgumentException("Credit amount must be positive", nameof(amount));
             }
 
             Balance = Balance.Add(amount);
             RecordEntry(LedgerEntryType.Credit, amount);
         }
 
-        public void Withdraw(Money amount)
+        public void Debit(Money amount)
         {
             if (amount is null)
             {
-                throw new ArgumentNullException(nameof(amount), "Withdrawal amount cannot be null.");
+                throw new ArgumentNullException(nameof(amount), "Debit amount cannot be null.");
             }
 
             if (amount.Amount <= 0)
             {
-                throw new ArgumentException("Withdrawal amount must be positive", nameof(amount));
-            }
-
-            if (amount.Amount > Balance.Amount)
-            {
-                throw new InsufficientFundsException(Id);
+                throw new ArgumentException("Debit amount must be positive", nameof(amount));
             }
 
             Balance = Balance.Subtract(amount);

@@ -41,13 +41,8 @@ namespace Wallet.Domain.Transfers
                 throw new CurrencyMismatchException(destination.Balance.Currency, source.Balance.Currency);
             }
 
-            if(source.Balance.Amount < amount.Amount)
-            {
-                throw new InsufficientFundsException(source.Id);
-            }
-
-            source.Withdraw(amount);
-            destination.Deposit(amount);
+            source.Debit(amount);
+            destination.Credit(amount);
         }
     }
 }

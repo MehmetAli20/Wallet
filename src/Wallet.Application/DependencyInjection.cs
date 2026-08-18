@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Wallet.Application.Accounts.CreateAccount;
 using Wallet.Application.Common.Behaviors;
 using Wallet.Application.Transfers;
 using Wallet.Application.Users;

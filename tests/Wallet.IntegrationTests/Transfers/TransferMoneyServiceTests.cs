@@ -29,14 +29,14 @@ namespace Wallet.IntegrationTests.Transfers
             return new(new AccountRepository(context), new UnitOfWork(context), new TransferService());
         }
 
-        private async Task SeedAccountAsync(Guid sourceId, decimal sourceBalance, Guid destinationId, decimal destinationBalance)
+        private async Task SeedAccountsAsync(Guid sourceId, Guid destinationId)
         {
             await using var context = _fixture.CreateContext(TestCurrentUser.System);
             var repository = new AccountRepository(context);
 
-            await repository.AddAsync(new Account(sourceId, Guid.NewGuid(), new Money(sourceBalance, "USD")));
-            await repository.AddAsync(new Account(destinationId, Guid.NewGuid(), new Money(destinationBalance, "USD")));
-            
+            await repository.AddAsync(new Account(sourceId, Guid.NewGuid(), "USD"));
+            await repository.AddAsync(new Account(destinationId, Guid.NewGuid(), "USD"));
+
             await new UnitOfWork(context).SaveChangesAsync();
         }
 
@@ -46,7 +46,7 @@ namespace Wallet.IntegrationTests.Transfers
             var sourceId = Guid.NewGuid();
             var destinationId = Guid.NewGuid();
 
-            await SeedAccountAsync(sourceId, 100m, destinationId, 30m);
+            await SeedAccountsAsync(sourceId, destinationId);
 
             await using (var context = _fixture.CreateContext(TestCurrentUser.System))
             {
@@ -61,8 +61,8 @@ namespace Wallet.IntegrationTests.Transfers
                 var source = await repository.GetByIdAsync(sourceId);
                 var destination = await repository.GetByIdAsync(destinationId);
 
-                source!.Balance.Should().Be(new Money(70m, "USD"));
-                destination!.Balance.Should().Be(new Money(60m, "USD"));
+                source!.Balance.Should().Be(new Money(-30m, "USD"));
+                destination!.Balance.Should().Be(new Money(30m, "USD"));
 
                 source.Entries.Should().ContainSingle();
                 source.Entries[0].Type.Should().Be(LedgerEntryType.Debit);
@@ -76,14 +76,14 @@ namespace Wallet.IntegrationTests.Transfers
         {
             var sourceId = Guid.NewGuid();
             var destinationId = Guid.NewGuid();
-            await SeedAccountAsync(sourceId, 100m, destinationId, 30m);
+            await SeedAccountsAsync(sourceId, destinationId);
 
             await using(var context = _fixture.CreateContext(TestCurrentUser.System))
             {
                 var act = async () => await CreateHandler(context).Handle(
-                    new TransferMoneyCommand(sourceId, destinationId, 500m, "USD", Guid.NewGuid().ToString()),
+                    new TransferMoneyCommand(sourceId, destinationId, 500m, "EUR", Guid.NewGuid().ToString()),
                     CancellationToken.None);
-                await act.Should().ThrowAsync<InsufficientFundsException>();
+                await act.Should().ThrowAsync<CurrencyMismatchException>();
             }
 
             await using(var context = _fixture.CreateContext(TestCurrentUser.System))
@@ -92,8 +92,8 @@ namespace Wallet.IntegrationTests.Transfers
                 var source = await repository.GetByIdAsync(sourceId);
                 var destination = await repository.GetByIdAsync(destinationId);
 
-                source!.Balance.Should().Be(new Money(100m, "USD"));
-                destination!.Balance.Should().Be(new Money(30m, "USD"));
+                source!.Balance.Should().Be(new Money(0m, "USD"));
+                destination!.Balance.Should().Be(new Money(0m, "USD"));
                 source.Entries.Should().BeEmpty();
                 destination.Entries.Should().BeEmpty();
             }
@@ -104,7 +104,7 @@ namespace Wallet.IntegrationTests.Transfers
         {
             var sourceId = Guid.NewGuid();
             var destinationId = Guid.NewGuid();
-            await SeedAccountAsync(sourceId, 100m, destinationId, 30m);
+            await SeedAccountsAsync(sourceId, destinationId);
 
             await using(var context = _fixture.CreateContext(TestCurrentUser.System))
             {
@@ -126,8 +126,8 @@ namespace Wallet.IntegrationTests.Transfers
                 var source = await repository.GetByIdAsync(sourceId);
                 var destination = await repository.GetByIdAsync(destinationId);
 
-                source!.Balance.Should().Be(new Money(100m, "USD"));
-                destination!.Balance.Should().Be(new Money(30m, "USD"));
+                source!.Balance.Should().Be(new Money(0m, "USD"));
+                destination!.Balance.Should().Be(new Money(0m, "USD"));
                 source.Entries.Should().BeEmpty();
                 destination.Entries.Should().BeEmpty();
             }
@@ -138,7 +138,7 @@ namespace Wallet.IntegrationTests.Transfers
         {
             var sourceId = Guid.NewGuid();
             var destinationId = Guid.NewGuid();
-            await SeedAccountAsync(sourceId, 100m, destinationId, 30m);
+            await SeedAccountsAsync(sourceId, destinationId);
             
             await using var contextA = _fixture.CreateContext(TestCurrentUser.System);
             await using var contextB = _fixture.CreateContext(TestCurrentUser.System);
@@ -167,7 +167,7 @@ namespace Wallet.IntegrationTests.Transfers
 
             var totalAfter = finalSource!.Balance.Amount + finalDestination!.Balance.Amount;
 
-            totalAfter.Should().Be(100m + 30m, "the total balance should remain the same after concurrent transfers");
+            totalAfter.Should().Be(0m, "an obligations ledger nets to zero; concurrent transfers must not change that");
         }
 
         [Fact]
@@ -175,7 +175,7 @@ namespace Wallet.IntegrationTests.Transfers
         {
             var accountId = Guid.NewGuid();
             var otherId = Guid.NewGuid();
-            await SeedAccountAsync(accountId, 100m, otherId, 0m);
+            await SeedAccountsAsync(accountId, otherId);
 
             await using var contextA = _fixture.CreateContext(TestCurrentUser.System);
             await using var contextB = _fixture.CreateContext(TestCurrentUser.System);
