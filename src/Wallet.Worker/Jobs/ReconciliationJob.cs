@@ -19,17 +19,25 @@ namespace Wallet.Worker.Jobs
         public async Task RunAsync(CancellationToken cancellationToken = default)
         {
             var report = await _sender.Send(new GetReconciliationReportQuery(), cancellationToken);
-            
+
             if (report.IsBalanced)
             {
-                _logger.LogInformation("Reconciliation OK - {CurrencyCount} currencies checked, all balanced.", report.Balances.Count);
+                _logger.LogInformation("Reconciliation OK - {CurrencyCount} currencies, {AccountCount} accounts checked.",
+                    report.LedgerTotals.Count, report.NetPositions.Count);
                 return;
             }
 
-            foreach (var balance in report.Balances.Where(b=>!b.IsBalanced))
-            {
-                _logger.LogCritical("RECONCILIATION FAILURE for {Currency}: Credits:{Credits}, Debits:{Debits}, discrepancy:{Discrepancy}", balance.Currency, balance.TotalCredits, balance.TotalDebits, balance.Discrepancy);
-            }
+            foreach (var t in report.LedgerTotals.Where(x => !x.IsBalanced))
+                _logger.LogCritical("LEDGER UNBALANCED {Currency}: credits {Credits}, debits {Debits}, diff {Discrepancy}",
+                    t.Currency, t.TotalCredits, t.TotalDebits, t.Discrepancy);
+
+            foreach (var p in report.NetPositions.Where(x => !x.IsBalanced))
+                _logger.LogCritical("POSITIONS DO NOT NET TO ZERO {Currency}: total {Total}",
+                    p.Currency, p.TotalBalance);
+
+            foreach (var d in report.AccountDiscrepancies)
+                _logger.LogCritical("ACCOUNT BALANCE DRIFT {AccountId} {Currency}: balance {Balance}, ledger {LedgerNet}, diff {Difference}",
+                    d.AccountId, d.Currency, d.Balance, d.LedgerNet, d.Difference);
 
             throw new InvalidOperationException("Reconciliation failed. See logs for details.");
         }

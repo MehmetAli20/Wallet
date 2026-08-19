@@ -18,9 +18,11 @@ namespace Wallet.Application.Reconciliation
 
         public async Task<LedgerReconciliationReport> Handle(GetReconciliationReportQuery request, CancellationToken cancellationToken)
         {
-            var balances = await _reconciliation.GetCurrencyBalancesAsync(cancellationToken);
-            var ledgerReport = LedgerReconciliationReport.From(balances);
-            return ledgerReport;
+            var totals = await _reconciliation.GetLedgerTotalsAsync(cancellationToken);
+            var positions = await _reconciliation.GetNetPositionsAsync(cancellationToken);
+            var discrepancies = await _reconciliation.GetAccountDiscrepanciesAsync(cancellationToken);
+
+            return new LedgerReconciliationReport(totals, positions, discrepancies);
         }
     }
 }

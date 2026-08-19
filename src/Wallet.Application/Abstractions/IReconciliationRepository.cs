@@ -4,6 +4,10 @@ namespace Wallet.Application.Abstractions
 {
     public interface IReconciliationRepository
     {
-        Task<IReadOnlyList<CurrencyBalance>> GetCurrencyBalancesAsync(CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<CurrencyLedgerTotals>> GetLedgerTotalsAsync(CancellationToken cancellationToken = default);
+
+        Task<IReadOnlyList<CurrencyNetPosition>> GetNetPositionsAsync(CancellationToken cancellationToken = default);
+
+        Task<IReadOnlyList<AccountDiscrepancy>> GetAccountDiscrepanciesAsync(CancellationToken cancellationToken = default);
     }
 }
