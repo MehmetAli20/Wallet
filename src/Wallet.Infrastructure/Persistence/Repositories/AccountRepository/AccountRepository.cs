@@ -35,7 +35,7 @@ namespace Wallet.Infrastructure.Persistence.Repositories.AccountRepository
         public async Task<IReadOnlyList<Account>> GetAllAsync(CancellationToken cancellationToken = default)
         {
             return await _context.Accounts
-                .OrderBy(a => a.Balance.Currency)
+                .OrderBy(a => a.Currency)
                 .ToListAsync();
         }
     }

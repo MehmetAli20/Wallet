@@ -19,6 +19,7 @@ namespace Wallet.UnitTests.Domain.Accounts
 
             account.Id.Should().Be(id);
             account.OwnerId.Should().Be(ownerId);
+            account.Currency.Should().Be("USD");
             account.Balance.Should().Be(new Money(0m, "USD"));
         }
 
@@ -27,6 +28,7 @@ namespace Wallet.UnitTests.Domain.Accounts
         {
             var account = new Account(Guid.NewGuid(), Guid.NewGuid(), "usd");
 
+            account.Currency.Should().Be("USD");
             account.Balance.Currency.Should().Be("USD");
         }
 

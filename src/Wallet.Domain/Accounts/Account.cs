@@ -5,10 +5,15 @@ namespace Wallet.Domain.Accounts
     public class Account
     {
         private readonly List<LedgerEntry> _entries = new();
+        private decimal _balanceAmount;
 
         public Guid Id { get; private set; }
         public Guid OwnerId { get; private set; }
-        public Money Balance { get; private set; }
+
+        public string Currency { get; private set; }
+
+        public Money Balance => new(_balanceAmount, Currency);
+
         public IReadOnlyList<LedgerEntry> Entries => _entries.AsReadOnly();
 
         public Account(Guid id, Guid ownerId, string currency)
@@ -25,12 +30,13 @@ namespace Wallet.Domain.Accounts
 
             Id = id;
             OwnerId = ownerId;
-            Balance = new Money(0m, currency);
+            Currency = Money.NormalizeCurrency(currency);
+            _balanceAmount = 0m;
         }
 
         private Account()
         {
-            Balance = null!;
+            Currency = null!;
         }
 
         public void Credit(Money amount)
@@ -45,7 +51,7 @@ namespace Wallet.Domain.Accounts
                 throw new ArgumentException("Credit amount must be positive", nameof(amount));
             }
 
-            Balance = Balance.Add(amount);
+            _balanceAmount = Balance.Add(amount).Amount;
             RecordEntry(LedgerEntryType.Credit, amount);
         }
 
@@ -61,7 +67,7 @@ namespace Wallet.Domain.Accounts
                 throw new ArgumentException("Debit amount must be positive", nameof(amount));
             }
 
-            Balance = Balance.Subtract(amount);
+            _balanceAmount = Balance.Subtract(amount).Amount;
             RecordEntry(LedgerEntryType.Debit, amount);
         }
 

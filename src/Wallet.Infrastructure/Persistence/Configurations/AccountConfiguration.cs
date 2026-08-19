@@ -15,11 +15,17 @@ namespace Wallet.Infrastructure.Persistence.Configurations
             builder.HasKey(a => a.Id);
             builder.Property<uint>("xmin").IsRowVersion();
 
-            builder.ComplexProperty(a => a.Balance, b =>
-            {
-                b.Property(m => m.Amount).HasColumnName("Balance").HasColumnType("numeric(19,4)");
-                b.Property(m => m.Currency).HasColumnName("Currency").HasMaxLength(3);
-            });
+            builder.Ignore(a => a.Balance);
+            builder.Property<decimal>("_balanceAmount")
+                .HasColumnName("Balance")
+                .HasColumnType("numeric(19,4)");
+
+            builder.Property(a => a.Currency)
+                .HasColumnName("Currency")
+                .HasMaxLength(3)
+                .IsRequired();
+
+            builder.HasIndex(a => new { a.OwnerId, a.Currency }).IsUnique();
 
             builder.HasMany(a => a.Entries)
                 .WithOne()

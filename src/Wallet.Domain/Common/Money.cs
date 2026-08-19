@@ -11,11 +11,16 @@ namespace Wallet.Domain.Common
         public string Currency { get; }
         public Money(decimal amount,string currency)
         {
+            Amount = amount;
+            Currency = NormalizeCurrency(currency);
+        }
+
+        public static string NormalizeCurrency(string currency)
+        {
             if (string.IsNullOrWhiteSpace(currency) || currency.Length != 3 || !currency.All(char.IsLetter))
                 throw new ArgumentException("Currency must be a 3-letter code.", nameof(currency));
-            
-            Amount = amount;
-            Currency = currency.ToUpperInvariant();
+
+            return currency.ToUpperInvariant();
         }
         public Money Add(Money other)
         {
