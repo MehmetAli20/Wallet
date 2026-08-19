@@ -38,5 +38,13 @@ namespace Wallet.Infrastructure.Persistence.Repositories.AccountRepository
                 .OrderBy(a => a.Currency)
                 .ToListAsync();
         }
+
+        public async Task<Account?> GetByOwnerAndCurrencyAsync(Guid ownerId, string currency, CancellationToken cancellationToken = default)
+        {
+            return await _context.Accounts
+                .IgnoreQueryFilters()
+                .Include(a=>a.Entries)
+                .FirstOrDefaultAsync(a=>a.OwnerId == ownerId && a.Currency == currency, cancellationToken);
+        }
     }
 }

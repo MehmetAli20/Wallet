@@ -36,5 +36,10 @@ namespace Wallet.Infrastructure.Persistence.Repositories.UserRepository
             var normalizedEmail = User.NormalizeEmail(email);
             return await _context.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail, cancellationToken);
         }
+
+        public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            return await _context.Users.AnyAsync(u=>u.Id == id, cancellationToken);
+        }
     }
 }

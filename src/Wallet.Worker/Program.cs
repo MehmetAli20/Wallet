@@ -18,7 +18,6 @@ builder.Services.AddHangfire(config => config
 
 builder.Services.AddHangfireServer();
 builder.Services.AddScoped<ReconciliationJob>();
-builder.Services.AddScoped<ScheduledTransferJob>();
 builder.Services.AddSingleton<ICurrentUser, SystemCurrentUser>();
 
 var app = builder.Build();
@@ -30,11 +29,6 @@ app.UseHangfireDashboard("/hangfire", new DashboardOptions
 
 RecurringJob.AddOrUpdate<ReconciliationJob>(
     "reconciliation-job",
-    job => job.RunAsync(),
-    Cron.Minutely);
-
-RecurringJob.AddOrUpdate<ScheduledTransferJob>(
-    "process-scheduled-transfers",
     job => job.RunAsync(),
     Cron.Minutely);
 

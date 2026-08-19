@@ -14,7 +14,7 @@ namespace Wallet.IntegrationTests.Reconciliation
         private readonly PostgresFixture _fixture;
         public ReconciliationTests(PostgresFixture fixture) => _fixture = fixture;
 
-        private async Task<(Guid source, Guid destination)> SeedTransferAsync()
+        private async Task<(Guid source, Guid destination)> SeedTransferAsync(string currency)
         {
             var sourceId = Guid.NewGuid();
             var destinationId = Guid.NewGuid();
@@ -22,12 +22,12 @@ namespace Wallet.IntegrationTests.Reconciliation
             await using var context = _fixture.CreateContext(TestCurrentUser.System);
             var repository = new AccountRepository(context);
 
-            var source = new Account(sourceId, Guid.NewGuid(), "USD");
-            var destination = new Account(destinationId, Guid.NewGuid(), "USD");
+            var source = new Account(sourceId, Guid.NewGuid(), currency);
+            var destination = new Account(destinationId, Guid.NewGuid(), currency);
 
             await repository.AddAsync(source);
             await repository.AddAsync(destination);
-            new TransferService().Transfer(source, destination, new Money(40m, "USD"));
+            new TransferService().Transfer(source, destination, new Money(40m, currency));
             await new UnitOfWork(context).SaveChangesAsync();
 
             return (sourceId, destinationId);
@@ -36,20 +36,25 @@ namespace Wallet.IntegrationTests.Reconciliation
         [Fact]
         public async Task HealthyLedger_IsBalanced()
         {
-            await SeedTransferAsync();
+            var (source, destination) = await SeedTransferAsync("USD");
 
             await using var context = _fixture.CreateContext(TestCurrentUser.System);
             var repository = new ReconciliationRepository(context);
 
-            (await repository.GetAccountDiscrepanciesAsync()).Should().BeEmpty();
-            (await repository.GetLedgerTotalsAsync()).Should().OnlyContain(t => t.IsBalanced);
-            (await repository.GetNetPositionsAsync()).Should().OnlyContain(p => p.IsBalanced);
+            var discrepancies = await repository.GetAccountDiscrepanciesAsync();
+            discrepancies.Should().NotContain(d => d.AccountId == source || d.AccountId == destination);
+
+            var totals = await repository.GetLedgerTotalsAsync();
+            totals.Single(t => t.Currency == "USD").IsBalanced.Should().BeTrue();
+
+            var positions = await repository.GetNetPositionsAsync();
+            positions.Single(p => p.Currency == "USD").IsBalanced.Should().BeTrue();
         }
 
         [Fact]
         public async Task BalanceDriftedFromLedger_IsDetected()
         {
-            var (sourceId, _) = await SeedTransferAsync();
+            var (sourceId, _) = await SeedTransferAsync("GBP");
 
             await using var context = _fixture.CreateContext(TestCurrentUser.System);
             await context.Database.ExecuteSqlAsync(
@@ -64,7 +69,7 @@ namespace Wallet.IntegrationTests.Reconciliation
         [Fact]
         public async Task PositionsNotNettingToZero_IsDetected()
         {
-            var (sourceId, _) = await SeedTransferAsync();
+            var (sourceId, _) = await SeedTransferAsync("EUR");
 
             await using var context = _fixture.CreateContext(TestCurrentUser.System);
             await context.Database.ExecuteSqlAsync(
@@ -72,13 +77,13 @@ namespace Wallet.IntegrationTests.Reconciliation
 
             var positions = await new ReconciliationRepository(context).GetNetPositionsAsync();
 
-            positions.Should().Contain(p => p.Currency == "USD" && !p.IsBalanced);
+            positions.Should().Contain(p => p.Currency == "EUR" && !p.IsBalanced);
         }
 
         [Fact]
         public async Task Reconciliation_IsGlobal_EvenInAUserContext()
         {
-            await SeedTransferAsync();
+            await SeedTransferAsync("TRY");
 
             await using var context = _fixture.CreateContext(TestCurrentUser.For(Guid.NewGuid()));
             var positions = await new ReconciliationRepository(context).GetNetPositionsAsync();
