@@ -20,7 +20,7 @@ namespace Wallet.UnitTests.Domain.Accounts
             account.Id.Should().Be(id);
             account.OwnerId.Should().Be(ownerId);
             account.Currency.Should().Be("USD");
-            account.Balance.Should().Be(new Money(0m, "USD"));
+            account.Balance.Should().Be(new Money(5m, "USD"));
         }
 
         [Fact]
