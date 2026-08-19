@@ -76,6 +76,7 @@ namespace Wallet.Domain.Accounts
             _entries.Add(new LedgerEntry(
                 Guid.NewGuid(),
                 Id,
+                OwnerId,
                 type,
                 amount,
                 DateTimeOffset.UtcNow,

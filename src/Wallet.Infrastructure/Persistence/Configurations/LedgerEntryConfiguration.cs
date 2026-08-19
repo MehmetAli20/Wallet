@@ -24,6 +24,7 @@ namespace Wallet.Infrastructure.Persistence.Configurations
             builder.Property(e => e.Sequence);
 
             builder.HasIndex(e => new { e.AccountId, e.Sequence });
+            builder.HasIndex(e => e.OwnerId);
         }
     }
 }

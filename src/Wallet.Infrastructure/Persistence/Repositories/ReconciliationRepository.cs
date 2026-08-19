@@ -17,6 +17,7 @@ namespace Wallet.Infrastructure.Persistence.Repositories
         public async Task<IReadOnlyList<CurrencyLedgerTotals>> GetLedgerTotalsAsync(CancellationToken cancellationToken = default)
         {
             var grouped = await _context.Set<LedgerEntry>()
+                .IgnoreQueryFilters()
                 .GroupBy(e => e.Amount.Currency)
                 .Select(g => new
                 {
@@ -58,6 +59,7 @@ namespace Wallet.Infrastructure.Persistence.Repositories
                     a.Currency,
                     Balance = EF.Property<decimal>(a, "_balanceAmount"),
                     LedgerNet = _context.Set<LedgerEntry>()
+                        .IgnoreQueryFilters()
                         .Where(e => e.AccountId == a.Id)
                         .Sum(e => (decimal?)(e.Type == LedgerEntryType.Credit ? e.Amount.Amount : -e.Amount.Amount)) ?? 0m
                 })
