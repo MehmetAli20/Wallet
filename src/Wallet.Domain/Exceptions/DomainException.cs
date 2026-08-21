@@ -24,4 +24,8 @@ namespace Wallet.Domain.Exceptions
     {
         public InvalidTransferException(string message) : base(message) { }
     }
+    public class InvalidGroupOperationException : DomainException
+    {
+        public InvalidGroupOperationException(string message) : base(message) { }
+    }
 }
