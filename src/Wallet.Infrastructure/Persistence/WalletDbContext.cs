@@ -4,6 +4,7 @@ using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Wallet.Application.Abstractions.Users;
 using Wallet.Domain.Accounts;
+using Wallet.Domain.Groups;
 using Wallet.Domain.Transfers;
 using Wallet.Domain.Users;
 
@@ -22,6 +23,7 @@ namespace Wallet.Infrastructure.Persistence
         public DbSet<User> Users => Set<User>();
         public DbSet<LedgerEntry> LedgerEntries => Set<LedgerEntry>();
         public DbSet<ScheduledTransfer> ScheduledTransfers => Set<ScheduledTransfer>();
+        public DbSet<Group> Groups => Set<Group>();
         protected override void OnModelCreating(ModelBuilder modelbuilder)
         {
             modelbuilder.ApplyConfigurationsFromAssembly(typeof(WalletDbContext).Assembly);
@@ -29,6 +31,9 @@ namespace Wallet.Infrastructure.Persistence
                 .HasQueryFilter(a => _currentUser.IsSystem || a.OwnerId == _currentUser.UserId);
             modelbuilder.Entity<LedgerEntry>()
                 .HasQueryFilter(e=>_currentUser.IsSystem || e.OwnerId == _currentUser.UserId);
+            modelbuilder.Entity<Group>()
+                .HasQueryFilter(g => _currentUser.IsSystem
+                    || g.Members.Any(m => m.UserId == _currentUser.UserId && m.Status == GroupMemberStatus.Active));
             base.OnModelCreating(modelbuilder);
         }
     }

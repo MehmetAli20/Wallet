@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Text;
 using Wallet.Application.Abstractions;
 using Wallet.Application.Abstractions.Accounts;
+using Wallet.Application.Abstractions.Groups;
 using Wallet.Application.Abstractions.Transfers;
 using Wallet.Application.Abstractions.Users;
 using Wallet.Infrastructure.Authentication;
@@ -35,6 +36,7 @@ namespace Wallet.Infrastructure
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<IIdempotencyStore, IdempotencyStore>();
             services.AddScoped<IReconciliationRepository, ReconciliationRepository>();
+            services.AddScoped<IGroupRepository, GroupRepository>();
             services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
 
             return services;          
