@@ -111,7 +111,7 @@ namespace Wallet.UnitTests.Domain.Groups
             var group = NewNamed();
             var invited = Guid.NewGuid();
 
-            var member = group.Invite(invited);
+            var member = group.Invite(invited, group.Members[0].UserId);
 
             member.UserId.Should().Be(invited);
             member.Role.Should().Be(GroupMemberRole.Member);
@@ -125,7 +125,7 @@ namespace Wallet.UnitTests.Domain.Groups
         {
             var pair = Group.CreatePair(Guid.NewGuid(), "USD", Guid.NewGuid(), Guid.NewGuid());
 
-            var act = () => pair.Invite(Guid.NewGuid());
+            var act = () => pair.Invite(Guid.NewGuid(), Guid.NewGuid());
 
             act.Should().Throw<InvalidGroupOperationException>();
         }
@@ -136,7 +136,7 @@ namespace Wallet.UnitTests.Domain.Groups
             var creator = Guid.NewGuid();
             var group = NewNamed(creator);
 
-            var act = () => group.Invite(creator);
+            var act = () => group.Invite(creator, creator);
 
             act.Should().Throw<InvalidGroupOperationException>();
         }
@@ -145,7 +145,7 @@ namespace Wallet.UnitTests.Domain.Groups
         public void Invite_WithEmptyUserId_Throws()
         {
             var group = NewNamed();
-            var act = () => group.Invite(Guid.Empty);
+            var act = () => group.Invite(Guid.Empty, group.Members[0].UserId);
             act.Should().Throw<ArgumentException>();
         }
 
@@ -154,7 +154,7 @@ namespace Wallet.UnitTests.Domain.Groups
         {
             var group = NewNamed();
             var invited = Guid.NewGuid();
-            group.Invite(invited);
+            group.Invite(invited, group.Members[0].UserId);
 
             group.Accept(invited);
 
@@ -178,7 +178,7 @@ namespace Wallet.UnitTests.Domain.Groups
         {
             var group = NewNamed();
             var invited = Guid.NewGuid();
-            group.Invite(invited);
+            group.Invite(invited, group.Members[0].UserId);
             group.Accept(invited);
 
             var act = () => group.Accept(invited);
@@ -191,7 +191,7 @@ namespace Wallet.UnitTests.Domain.Groups
         {
             var group = NewNamed();
             var invited = Guid.NewGuid();
-            group.Invite(invited);
+            group.Invite(invited, group.Members[0].UserId);
 
             group.Remove(invited);
 
@@ -237,10 +237,89 @@ namespace Wallet.UnitTests.Domain.Groups
             var creator = Guid.NewGuid();
             var group = NewNamed(creator);
             var invited = Guid.NewGuid();
-            group.Invite(invited);
+            group.Invite(invited, group.Members[0].UserId);
             group.Accept(invited);
 
             var act = () => group.Remove(creator);
+
+            act.Should().Throw<InvalidGroupOperationException>();
+        }
+
+
+        [Fact]
+        public void Invite_ByNonMember_Throws()
+        {
+            var group = NewNamed();
+
+            var act = () => group.Invite(Guid.NewGuid(), Guid.NewGuid());
+
+            act.Should().Throw<InvalidGroupOperationException>();
+        }
+
+        [Fact]
+        public void Invite_ByInvitedButNotAcceptedMember_Throws()
+        {
+            var creator = Guid.NewGuid();
+            var group = NewNamed(creator);
+            var invited = Guid.NewGuid();
+            group.Invite(invited, creator);
+
+            var act = () => group.Invite(Guid.NewGuid(), invited);
+
+            act.Should().Throw<InvalidGroupOperationException>();
+        }
+
+        [Fact]
+        public void Invite_RecordsWhoInvited()
+        {
+            var creator = Guid.NewGuid();
+            var group = NewNamed(creator);
+            var invited = Guid.NewGuid();
+
+            var member = group.Invite(invited, creator);
+
+            member.InvitedBy.Should().Be(creator);
+        }
+
+        [Fact]
+        public void Creator_HasNoInviter()
+        {
+            var group = NewNamed();
+
+            group.Members[0].InvitedBy.Should().BeNull();
+        }
+
+        [Fact]
+        public void DeclineInvitation_RemovesThePendingMember()
+        {
+            var creator = Guid.NewGuid();
+            var group = NewNamed(creator);
+            var invited = Guid.NewGuid();
+            group.Invite(invited, creator);
+
+            group.DeclineInvitation(invited);
+
+            group.Members.Should().ContainSingle();
+            group.Members.Should().NotContain(m => m.UserId == invited);
+        }
+
+        [Fact]
+        public void DeclineInvitation_ByActiveMember_Throws()
+        {
+            var creator = Guid.NewGuid();
+            var group = NewNamed(creator);
+
+            var act = () => group.DeclineInvitation(creator);
+
+            act.Should().Throw<InvalidGroupOperationException>();
+        }
+
+        [Fact]
+        public void DeclineInvitation_ByNonMember_Throws()
+        {
+            var group = NewNamed();
+
+            var act = () => group.DeclineInvitation(Guid.NewGuid());
 
             act.Should().Throw<InvalidGroupOperationException>();
         }
@@ -250,7 +329,7 @@ namespace Wallet.UnitTests.Domain.Groups
         {
             var group = NewNamed();
             var invited = Guid.NewGuid();
-            group.Invite(invited);
+            group.Invite(invited, group.Members[0].UserId);
 
             group.IsActiveMember(invited).Should().BeFalse();
 

@@ -38,6 +38,9 @@ namespace Wallet.Api.Middleware
                 UniqueConstraintViolationException => (StatusCodes.Status409Conflict, "Conflict"),
                 IdempotentResponseUnavailableException => (StatusCodes.Status409Conflict, "Idempotent response unavailable"),
                 EmailAlreadyExistsException => (StatusCodes.Status409Conflict, "Email already exists"),
+                GroupNotFoundException => (StatusCodes.Status404NotFound, "Group not found"),
+                InvitationNotFoundException => (StatusCodes.Status404NotFound, "Invitation not found"),
+                InvalidGroupOperationException => (StatusCodes.Status400BadRequest, "Invalid group operation"),
                 _ => (0, string.Empty)
             };
             if(statusCode == 0)

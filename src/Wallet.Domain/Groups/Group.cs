@@ -76,7 +76,7 @@ namespace Wallet.Domain.Groups
         public static string BuildPairKey(Guid userA, Guid userB) =>
             userA.CompareTo(userB) < 0 ? $"{userA:N}:{userB:N}" : $"{userB:N}:{userA:N}";
 
-        public GroupMember Invite(Guid userId)
+        public GroupMember Invite(Guid userId, Guid invitedBy)
         {
             if (Kind == GroupKind.Pair)
                 throw new InvalidGroupOperationException("A pair cannot take a third member. Create a named group instead.");
@@ -84,14 +84,28 @@ namespace Wallet.Domain.Groups
             if (userId == Guid.Empty)
                 throw new ArgumentException("User Id cannot be empty.", nameof(userId));
 
+            if (!IsActiveMember(invitedBy))
+                throw new InvalidGroupOperationException("Only an active member can invite.");
+
             if (_members.Any(m => m.UserId == userId))
                 throw new InvalidGroupOperationException("User is already in the group.");
 
             var member = new GroupMember(
-                Guid.NewGuid(), Id, userId, GroupMemberRole.Member, GroupMemberStatus.Invited);
+                Guid.NewGuid(), Id, userId, GroupMemberRole.Member, GroupMemberStatus.Invited, invitedBy);
 
             _members.Add(member);
             return member;
+        }
+
+        public void DeclineInvitation(Guid userId)
+        {
+            var member = _members.SingleOrDefault(m => m.UserId == userId)
+                ?? throw new InvalidGroupOperationException("User was not invited to this group.");
+
+            if (member.Status != GroupMemberStatus.Invited)
+                throw new InvalidGroupOperationException("Only a pending invitation can be declined.");
+
+            _members.Remove(member);
         }
 
         public void Accept(Guid userId)

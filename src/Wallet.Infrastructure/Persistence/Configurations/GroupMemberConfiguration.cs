@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Wallet.Domain.Groups;
 
@@ -15,6 +15,7 @@ namespace Wallet.Infrastructure.Persistence.Configurations
             builder.Property(m => m.Role).HasConversion<string>().HasMaxLength(20);
             builder.Property(m => m.Status).HasConversion<string>().HasMaxLength(20);
 
+            builder.Property(m => m.InvitedBy);
             builder.Property(m => m.InvitedAt);
             builder.Property(m => m.JoinedAt);
 

@@ -1,8 +1,10 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Wallet.Application.Abstractions.Exceptions;
 using Wallet.Domain.Groups;
 using Wallet.Infrastructure.Persistence;
-using Wallet.Infrastructure.Persistence.Repositories;
+using Wallet.Infrastructure.Persistence.Repositories.GroupRepository;
+using Wallet.Infrastructure.Persistence.Repositories.UserRepository;
+using Wallet.Domain.Users;
 
 namespace Wallet.IntegrationTests.Persistence.Repositories
 {
@@ -26,7 +28,7 @@ namespace Wallet.IntegrationTests.Persistence.Repositories
             var invited = Guid.NewGuid();
 
             var group = Group.CreateNamedGroup(id, "Piknik", "USD", creator);
-            group.Invite(invited);
+            group.Invite(invited, creator);
             await AddAsync(group);
 
             await using var context = _fixture.CreateContext(TestCurrentUser.System);
@@ -55,7 +57,7 @@ namespace Wallet.IntegrationTests.Persistence.Repositories
             {
                 var repository = new GroupRepository(context);
                 var group = await repository.GetByIdAsync(id);
-                group!.Invite(invited);
+                group!.Invite(invited, creator);
                 await new UnitOfWork(context).SaveChangesAsync();
             }
 
@@ -128,7 +130,7 @@ namespace Wallet.IntegrationTests.Persistence.Repositories
 
             var mine = Guid.NewGuid();
             var group = Group.CreateNamedGroup(mine, "Mine", "USD", member);
-            group.Invite(invitedOnly);
+            group.Invite(invitedOnly, member);
             await AddAsync(group);
 
             await AddAsync(Group.CreateNamedGroup(Guid.NewGuid(), "Theirs", "USD", stranger));

@@ -1,4 +1,4 @@
-using Wallet.Domain.Groups;
+﻿using Wallet.Domain.Groups;
 
 namespace Wallet.Application.Abstractions.Groups
 {
@@ -8,5 +8,7 @@ namespace Wallet.Application.Abstractions.Groups
         Task<Group?> GetPairAsync(Guid userA, Guid userB, string currency, CancellationToken cancellationToken = default);
         Task<IReadOnlyList<Group>> GetAllAsync(CancellationToken cancellationToken = default);
         Task AddAsync(Group group, CancellationToken cancellationToken = default);
+        Task<Group?> GetByInvitationIdAsync(Guid invitationId, CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<PendingInvitation>> GetPendingInvitationsAsync(Guid userId, CancellationToken cancellationToken = default);
     }
 }

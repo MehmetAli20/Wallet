@@ -12,6 +12,7 @@ namespace Wallet.Domain.Groups
         public Guid UserId { get; private set; }
         public GroupMemberRole Role { get; private set; }
         public GroupMemberStatus Status { get; private set; }
+        public Guid? InvitedBy { get; private set; }
         public DateTimeOffset InvitedAt { get; private set; }
         public DateTimeOffset? JoinedAt { get; private set; }
         
@@ -20,7 +21,7 @@ namespace Wallet.Domain.Groups
 
         }
 
-        internal GroupMember(Guid id, Guid groupId, Guid userId, GroupMemberRole role, GroupMemberStatus status)
+        internal GroupMember(Guid id, Guid groupId, Guid userId, GroupMemberRole role, GroupMemberStatus status, Guid? invitedBy = null)
         {
             if(id == Guid.Empty)
             {
@@ -41,6 +42,7 @@ namespace Wallet.Domain.Groups
             UserId = userId;
             Role = role;
             Status = status;
+            InvitedBy = invitedBy;
             InvitedAt = DateTimeOffset.UtcNow;
             JoinedAt = status == GroupMemberStatus.Active ? InvitedAt : null;
         }

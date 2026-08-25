@@ -14,6 +14,7 @@ using Wallet.Infrastructure.Persistence;
 using Wallet.Infrastructure.Persistence.Idempotency;
 using Wallet.Infrastructure.Persistence.Repositories;
 using Wallet.Infrastructure.Persistence.Repositories.AccountRepository;
+using Wallet.Infrastructure.Persistence.Repositories.GroupRepository;
 using Wallet.Infrastructure.Persistence.Repositories.TransferRepository;
 using Wallet.Infrastructure.Persistence.Repositories.UserRepository;
 

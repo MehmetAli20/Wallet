@@ -28,4 +28,14 @@ namespace Wallet.Domain.Exceptions
     {
         public InvalidGroupOperationException(string message) : base(message) { }
     }
+    public class InvitationNotFoundException : DomainException
+    {
+        public InvitationNotFoundException(Guid invitationId)
+            : base($"Invitation {invitationId} was not found.") { }
+    }
+
+    public class GroupNotFoundException : DomainException
+    {
+        public GroupNotFoundException(Guid groupId) : base($"Group {groupId} was not found.") { }
+    }
 }
