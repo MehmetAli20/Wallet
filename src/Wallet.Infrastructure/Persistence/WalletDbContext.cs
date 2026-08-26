@@ -31,6 +31,11 @@ namespace Wallet.Infrastructure.Persistence
             modelbuilder.ApplyConfigurationsFromAssembly(typeof(WalletDbContext).Assembly);
             modelbuilder.Entity<Account>()
                 .HasQueryFilter(a => _currentUser.IsSystem || a.OwnerId == _currentUser.UserId);
+            modelbuilder.Entity<Expense>()
+                .HasQueryFilter(e => _currentUser.IsSystem 
+                    || Set<Group>().Any(g => g.Id == e.GroupId 
+                        && g.Members.Any(m => m.UserId == _currentUser.UserId 
+                            && m.Status == GroupMemberStatus.Active)));
             modelbuilder.Entity<LedgerEntry>()
                 .HasQueryFilter(e => _currentUser.IsSystem
                     || e.OwnerId == _currentUser.UserId
