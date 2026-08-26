@@ -41,6 +41,7 @@ namespace Wallet.Api.Middleware
                 GroupNotFoundException => (StatusCodes.Status404NotFound, "Group not found"),
                 InvitationNotFoundException => (StatusCodes.Status404NotFound, "Invitation not found"),
                 InvalidGroupOperationException => (StatusCodes.Status400BadRequest, "Invalid group operation"),
+                InvalidExpenseException => (StatusCodes.Status400BadRequest, "Invalid expense"),
                 _ => (0, string.Empty)
             };
             if(statusCode == 0)
