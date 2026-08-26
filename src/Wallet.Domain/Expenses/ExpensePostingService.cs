@@ -1,4 +1,4 @@
-using Wallet.Domain.Accounts;
+﻿using Wallet.Domain.Accounts;
 using Wallet.Domain.Exceptions;
 
 namespace Wallet.Domain.Expenses
@@ -25,11 +25,13 @@ namespace Wallet.Domain.Expenses
                     throw new CurrencyMismatchException(expense.Total.Currency, participantAccount.Currency);
             }
 
-            payerAccount.Credit(expense.Total, expense.GroupId);
-
-            foreach (var split in expense.Splits.Where(s => s.Share.Amount > 0))
+            foreach (var split in expense.Splits)
             {
-                accounts[split.ParticipantId].Debit(split.Share, expense.GroupId);
+                if (split.Share.Amount <= 0 || split.ParticipantId == expense.PayerId)
+                    continue;
+
+                accounts[split.ParticipantId].Debit(split.Share, expense.GroupId, expense.PayerId);
+                payerAccount.Credit(split.Share, expense.GroupId, split.ParticipantId);
             }
         }
     }

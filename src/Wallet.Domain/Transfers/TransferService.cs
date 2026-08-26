@@ -41,8 +41,8 @@ namespace Wallet.Domain.Transfers
                 throw new CurrencyMismatchException(destination.Balance.Currency, source.Balance.Currency);
             }
 
-            source.Debit(amount, groupId);
-            destination.Credit(amount, groupId);
+            source.Debit(amount, groupId, destination.OwnerId);
+            destination.Credit(amount, groupId, source.OwnerId);
         }
     }
 }

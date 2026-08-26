@@ -10,6 +10,7 @@ namespace Wallet.IntegrationTests.Persistence
     public class LedgerEntryScopingTests : IClassFixture<PostgresFixture>
     {
         private static readonly Guid GroupId = Guid.NewGuid();
+        private static readonly Guid Counterparty = Guid.NewGuid();
 
         private readonly PostgresFixture _fixture;
         public LedgerEntryScopingTests(PostgresFixture fixture) => _fixture = fixture;
@@ -18,7 +19,7 @@ namespace Wallet.IntegrationTests.Persistence
         {
             await using var context = _fixture.CreateContext(TestCurrentUser.System);
             var account = new Account(Guid.NewGuid(), ownerId, "USD");
-            account.Credit(new Money(50m, "USD"), GroupId);
+            account.Credit(new Money(50m, "USD"), GroupId, Counterparty);
 
             await new AccountRepository(context).AddAsync(account);
             await new UnitOfWork(context).SaveChangesAsync();

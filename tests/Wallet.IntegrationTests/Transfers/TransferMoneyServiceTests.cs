@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Wallet.Application.Abstractions.Exceptions;
@@ -236,7 +236,7 @@ namespace Wallet.IntegrationTests.Transfers
                 new TransferService().Transfer(source!, destination!, new Money(40m, "USD"), groupId);
 
                 context.Set<LedgerEntry>().Add(new LedgerEntry(
-                    Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), groupId,
+                    Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), groupId, Guid.NewGuid(),
                     LedgerEntryType.Debit, new Money(1m, "USD"), DateTimeOffset.UtcNow, 99));
 
                 var act = async () => await new UnitOfWork(context).SaveChangesAsync();

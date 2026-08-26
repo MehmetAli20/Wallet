@@ -77,11 +77,36 @@ namespace Wallet.UnitTests.Domain.Expenses
         }
 
         [Fact]
+        public void GestureScenario_OneMemberCoversAnother()
+        {
+            var (group, members, accounts) = NewGroup(5);
+            var payer = members[0];
+            var generous = members[1];
+            var covered = members[4];
+
+            var expense = Expense.Create(Guid.NewGuid(), group, payer, 200m, "Market",
+                DateTimeOffset.UtcNow, members,
+                new Dictionary<Guid, decimal> { [generous] = 80m, [covered] = 0m });
+
+            _service.Post(expense, accounts);
+
+            accounts[payer].Balance.Should().Be(new Money(160m, "TRY"));
+            accounts[generous].Balance.Should().Be(new Money(-80m, "TRY"));
+            accounts[members[2]].Balance.Should().Be(new Money(-40m, "TRY"));
+            accounts[members[3]].Balance.Should().Be(new Money(-40m, "TRY"));
+            accounts[covered].Balance.Should().Be(new Money(0m, "TRY"));
+
+            accounts[covered].Entries.Should().BeEmpty();
+            accounts.Values.Sum(a => a.Balance.Amount).Should().Be(0m);
+        }
+
+        [Fact]
         public void Posting_KeepsCreditsAndDebitsEqual()
         {
             var (group, members, accounts) = NewGroup(3);
+            var payer = members[0];
 
-            var expense = Expense.Create(Guid.NewGuid(), group, members[0], 100m, "Market",
+            var expense = Expense.Create(Guid.NewGuid(), group, payer, 100m, "Market",
                 DateTimeOffset.UtcNow, members);
 
             _service.Post(expense, accounts);
@@ -92,11 +117,13 @@ namespace Wallet.UnitTests.Domain.Expenses
             var debits = entries.Where(e => e.Type == LedgerEntryType.Debit).Sum(e => e.Amount.Amount);
 
             credits.Should().Be(debits);
-            credits.Should().Be(100m);
+
+            var payerShare = expense.Splits.Single(s => s.ParticipantId == payer).Share.Amount;
+            credits.Should().Be(100m - payerShare);
         }
 
         [Fact]
-        public void Payer_GetsBothACreditForTheTotalAndADebitForTheirShare()
+        public void Payer_GetsOneCreditPerDebtor_AndNoSelfEntry()
         {
             var (group, members, accounts) = NewGroup(4);
             var payer = members[0];
@@ -108,9 +135,34 @@ namespace Wallet.UnitTests.Domain.Expenses
 
             var entries = accounts[payer].Entries;
 
-            entries.Should().HaveCount(2);
-            entries.Single(e => e.Type == LedgerEntryType.Credit).Amount.Should().Be(new Money(100m, "TRY"));
-            entries.Single(e => e.Type == LedgerEntryType.Debit).Amount.Should().Be(new Money(25m, "TRY"));
+            entries.Should().HaveCount(3);
+            entries.Should().OnlyContain(e => e.Type == LedgerEntryType.Credit);
+            entries.Should().OnlyContain(e => e.Amount == new Money(25m, "TRY"));
+            entries.Should().NotContain(e => e.CounterpartyId == payer);
+            entries.Select(e => e.CounterpartyId).Should().BeEquivalentTo(members.Skip(1));
+
+            accounts[payer].Balance.Should().Be(new Money(75m, "TRY"));
+        }
+
+        [Fact]
+        public void EveryDebt_IsWrittenAsTwoMirroredEntries()
+        {
+            var (group, members, accounts) = NewGroup(3);
+            var payer = members[0];
+            var debtor = members[1];
+
+            var expense = Expense.Create(Guid.NewGuid(), group, payer, 90m, "Market",
+                DateTimeOffset.UtcNow, members);
+
+            _service.Post(expense, accounts);
+
+            var debit = accounts[debtor].Entries.Single();
+            debit.Type.Should().Be(LedgerEntryType.Debit);
+            debit.CounterpartyId.Should().Be(payer);
+
+            var mirror = accounts[payer].Entries.Single(e => e.CounterpartyId == debtor);
+            mirror.Type.Should().Be(LedgerEntryType.Credit);
+            mirror.Amount.Should().Be(debit.Amount);
         }
 
         [Fact]
@@ -118,19 +170,19 @@ namespace Wallet.UnitTests.Domain.Expenses
         {
             var (group, members, accounts) = NewGroup(5);
             var payer = members[0];
+            var absent = members[4];
 
             var expense = Expense.Create(Guid.NewGuid(), group, payer, 100m, "Market",
                 DateTimeOffset.UtcNow, members,
-                new Dictionary<Guid, decimal> { [payer] = 0m });
+                new Dictionary<Guid, decimal> { [absent] = 0m });
 
             _service.Post(expense, accounts);
 
-            accounts[payer].Entries.Should().ContainSingle();
-            accounts[payer].Entries[0].Type.Should().Be(LedgerEntryType.Credit);
-            accounts[payer].Balance.Should().Be(new Money(100m, "TRY"));
+            accounts[absent].Entries.Should().BeEmpty();
+            accounts[absent].Balance.Should().Be(new Money(0m, "TRY"));
 
-            foreach (var other in members.Skip(1))
-                accounts[other].Balance.Should().Be(new Money(-25m, "TRY"));
+            accounts.Values.SelectMany(a => a.Entries)
+                .Should().NotContain(e => e.CounterpartyId == absent);
 
             accounts.Values.Sum(a => a.Balance.Amount).Should().Be(0m);
         }

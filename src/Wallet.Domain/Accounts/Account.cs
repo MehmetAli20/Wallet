@@ -39,7 +39,7 @@ namespace Wallet.Domain.Accounts
             Currency = null!;
         }
 
-        public void Credit(Money amount, Guid groupId)
+        public void Credit(Money amount, Guid groupId, Guid counterpartyId)
         {
             if (amount is null)
             {
@@ -52,10 +52,10 @@ namespace Wallet.Domain.Accounts
             }
 
             _balanceAmount = Balance.Add(amount).Amount;
-            RecordEntry(LedgerEntryType.Credit, amount, groupId);
+            RecordEntry(LedgerEntryType.Credit, amount, groupId, counterpartyId);
         }
 
-        public void Debit(Money amount, Guid groupId)
+        public void Debit(Money amount, Guid groupId, Guid counterpartyId)
         {
             if (amount is null)
             {
@@ -68,16 +68,17 @@ namespace Wallet.Domain.Accounts
             }
 
             _balanceAmount = Balance.Subtract(amount).Amount;
-            RecordEntry(LedgerEntryType.Debit, amount, groupId);
+            RecordEntry(LedgerEntryType.Debit, amount, groupId, counterpartyId);
         }
 
-        private void RecordEntry(LedgerEntryType type, Money amount, Guid groupId)
+        private void RecordEntry(LedgerEntryType type, Money amount, Guid groupId, Guid counterpartyId)
         {
             _entries.Add(new LedgerEntry(
                 Guid.NewGuid(),
                 Id,
                 OwnerId,
                 groupId,
+                counterpartyId,
                 type,
                 amount,
                 DateTimeOffset.UtcNow,

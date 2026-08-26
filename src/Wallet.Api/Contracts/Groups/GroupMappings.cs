@@ -13,5 +13,11 @@ namespace Wallet.Api.Contracts.Groups
                 group.Members
                     .Select(m => new GroupMemberResponse(m.UserId, m.Role.ToString(), m.Status.ToString()))
                     .ToList());
+
+        public static GroupBalanceResponse ToResponse(this GroupBalanceReport report) =>
+            new(report.GroupId,
+                report.Currency,
+                report.Positions.Select(p => new MemberPositionResponse(p.UserId, p.Net)).ToList(),
+                report.Debts.Select(d => new PairwiseDebtResponse(d.DebtorId, d.CreditorId, d.Amount)).ToList());
     }
 }

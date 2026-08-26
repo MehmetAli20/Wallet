@@ -8,6 +8,7 @@ namespace Wallet.UnitTests.Domain.Accounts
     public class AccountTests
     {
         private static readonly Guid GroupId = Guid.NewGuid();
+        private static readonly Guid Counterparty = Guid.NewGuid();
 
         private static Account NewAccount(string currency = "USD") =>
             new(Guid.NewGuid(), Guid.NewGuid(), currency);
@@ -59,7 +60,7 @@ namespace Wallet.UnitTests.Domain.Accounts
         public void Credit_WithValidAmount_UpdatesBalance()
         {
             var account = NewAccount();
-            account.Credit(new Money(50m, "USD"), GroupId);
+            account.Credit(new Money(50m, "USD"), GroupId, Counterparty);
 
             account.Balance.Should().Be(new Money(50m, "USD"));
         }
@@ -68,7 +69,7 @@ namespace Wallet.UnitTests.Domain.Accounts
         public void Credit_WithNullAmount_Throws()
         {
             var account = NewAccount();
-            var act = () => account.Credit(null!, GroupId);
+            var act = () => account.Credit(null!, GroupId, Counterparty);
             act.Should().Throw<ArgumentNullException>();
         }
 
@@ -76,9 +77,9 @@ namespace Wallet.UnitTests.Domain.Accounts
         public void Debit_WithValidAmount_UpdatesBalance()
         {
             var account = NewAccount();
-            account.Credit(new Money(100m, "USD"), GroupId);
+            account.Credit(new Money(100m, "USD"), GroupId, Counterparty);
 
-            account.Debit(new Money(50m, "USD"), GroupId);
+            account.Debit(new Money(50m, "USD"), GroupId, Counterparty);
 
             account.Balance.Should().Be(new Money(50m, "USD"));
         }
@@ -87,7 +88,7 @@ namespace Wallet.UnitTests.Domain.Accounts
         public void Debit_WithNullAmount_Throws()
         {
             var account = NewAccount();
-            var act = () => account.Debit(null!, GroupId);
+            var act = () => account.Debit(null!, GroupId, Counterparty);
             act.Should().Throw<ArgumentNullException>();
         }
 
@@ -95,9 +96,9 @@ namespace Wallet.UnitTests.Domain.Accounts
         public void Debit_BeyondBalance_GoesNegative_AndRecordsDebitEntry()
         {
             var account = NewAccount();
-            account.Credit(new Money(100m, "USD"), GroupId);
+            account.Credit(new Money(100m, "USD"), GroupId, Counterparty);
 
-            account.Debit(new Money(150m, "USD"), GroupId);
+            account.Debit(new Money(150m, "USD"), GroupId, Counterparty);
 
             account.Balance.Should().Be(new Money(-50m, "USD"));
             account.Entries.Should().HaveCount(2);
@@ -110,7 +111,7 @@ namespace Wallet.UnitTests.Domain.Accounts
         {
             var account = NewAccount();
 
-            account.Debit(new Money(40m, "USD"), GroupId);
+            account.Debit(new Money(40m, "USD"), GroupId, Counterparty);
 
             account.Balance.Should().Be(new Money(-40m, "USD"));
             account.Entries.Should().ContainSingle();
@@ -120,7 +121,7 @@ namespace Wallet.UnitTests.Domain.Accounts
         public void Debit_WithMismatchedCurrency_Throws()
         {
             var account = NewAccount();
-            var act = () => account.Debit(new Money(50m, "EUR"), GroupId);
+            var act = () => account.Debit(new Money(50m, "EUR"), GroupId, Counterparty);
             act.Should().Throw<CurrencyMismatchException>();
         }
 
@@ -128,7 +129,7 @@ namespace Wallet.UnitTests.Domain.Accounts
         public void Credit_WithNegativeAmount_Throws()
         {
             var account = NewAccount();
-            var act = () => account.Credit(new Money(-50m, "USD"), GroupId);
+            var act = () => account.Credit(new Money(-50m, "USD"), GroupId, Counterparty);
             act.Should().Throw<ArgumentException>();
         }
 
@@ -138,7 +139,7 @@ namespace Wallet.UnitTests.Domain.Accounts
         public void Debit_WithNonPositiveAmount_Throws(decimal amount)
         {
             var account = NewAccount();
-            var act = () => account.Debit(new Money(amount, "USD"), GroupId);
+            var act = () => account.Debit(new Money(amount, "USD"), GroupId, Counterparty);
             act.Should().Throw<ArgumentException>();
         }
 
@@ -146,7 +147,7 @@ namespace Wallet.UnitTests.Domain.Accounts
         public void Credit_WithMismatchedCurrency_Throws()
         {
             var account = NewAccount();
-            var act = () => account.Credit(new Money(50m, "EUR"), GroupId);
+            var act = () => account.Credit(new Money(50m, "EUR"), GroupId, Counterparty);
             act.Should().Throw<CurrencyMismatchException>();
         }
 
@@ -156,7 +157,7 @@ namespace Wallet.UnitTests.Domain.Accounts
         public void Credit_WithNonPositiveAmount_Throws(decimal amount)
         {
             var account = NewAccount();
-            var act = () => account.Credit(new Money(amount, "USD"), GroupId);
+            var act = () => account.Credit(new Money(amount, "USD"), GroupId, Counterparty);
             act.Should().Throw<ArgumentException>();
         }
 
@@ -170,7 +171,7 @@ namespace Wallet.UnitTests.Domain.Accounts
         public void Credit_RecordsCreditLedgerEntry()
         {
             var account = NewAccount();
-            account.Credit(new Money(50m, "USD"), GroupId);
+            account.Credit(new Money(50m, "USD"), GroupId, Counterparty);
 
             account.Entries.Should().ContainSingle();
             var entry = account.Entries[0];
@@ -183,7 +184,7 @@ namespace Wallet.UnitTests.Domain.Accounts
         public void Debit_RecordsDebitLedgerEntry()
         {
             var account = NewAccount();
-            account.Debit(new Money(50m, "USD"), GroupId);
+            account.Debit(new Money(50m, "USD"), GroupId, Counterparty);
 
             account.Entries.Should().ContainSingle();
             var entry = account.Entries[0];
@@ -196,8 +197,8 @@ namespace Wallet.UnitTests.Domain.Accounts
         public void MultipleOperations_AppendEntriesInOrder()
         {
             var account = NewAccount();
-            account.Credit(new Money(50m, "USD"), GroupId);
-            account.Debit(new Money(30m, "USD"), GroupId);
+            account.Credit(new Money(50m, "USD"), GroupId, Counterparty);
+            account.Debit(new Money(30m, "USD"), GroupId, Counterparty);
 
             account.Entries.Should().HaveCount(2);
             account.Entries[0].Type.Should().Be(LedgerEntryType.Credit);
@@ -208,7 +209,7 @@ namespace Wallet.UnitTests.Domain.Accounts
         public void FailedDebit_DoesNotRecordLedgerEntry()
         {
             var account = NewAccount();
-            var act = () => account.Debit(new Money(150m, "EUR"), GroupId);
+            var act = () => account.Debit(new Money(150m, "EUR"), GroupId, Counterparty);
 
             act.Should().Throw<CurrencyMismatchException>();
             account.Entries.Should().BeEmpty();

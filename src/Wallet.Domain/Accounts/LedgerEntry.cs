@@ -7,6 +7,7 @@ public sealed record LedgerEntry
     public Guid AccountId { get; }
     public Guid OwnerId { get; }
     public Guid GroupId { get; }
+    public Guid CounterpartyId { get; }
     public LedgerEntryType Type { get; }
     public Money Amount { get; }
     public DateTimeOffset OccurredAt { get; }
@@ -17,6 +18,7 @@ public sealed record LedgerEntry
         Guid accountId,
         Guid ownerId,
         Guid groupId,
+        Guid counterpartyId,
         LedgerEntryType type,
         Money amount,
         DateTimeOffset occurredAt,
@@ -34,6 +36,9 @@ public sealed record LedgerEntry
         if (groupId == Guid.Empty)
             throw new ArgumentException("Group Id cannot be empty.", nameof(groupId));
 
+        if (counterpartyId == Guid.Empty)
+            throw new ArgumentException("Counterparty Id cannot be empty.", nameof(counterpartyId));
+
         if (amount is null)
             throw new ArgumentNullException(nameof(amount), "Amount cannot be null.");
 
@@ -50,6 +55,7 @@ public sealed record LedgerEntry
         AccountId = accountId;
         OwnerId = ownerId;
         GroupId = groupId;
+        CounterpartyId = counterpartyId;
         Type = type;
         Amount = amount;
         OccurredAt = occurredAt;

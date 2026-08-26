@@ -1,10 +1,11 @@
-using MediatR;
+﻿using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Wallet.Api.Contracts.Groups;
 using Wallet.Api.Contracts.Groups.Requests;
 using Wallet.Api.Contracts.Groups.Responses;
 using Wallet.Application.Groups.CreateGroup;
+using Wallet.Application.Groups.GetGroupBalance;
 using Wallet.Application.Groups.GetMyGroups;
 using Wallet.Application.Groups.InviteToGroup;
 
@@ -40,6 +41,16 @@ namespace Wallet.Api.Controllers
         {
             await _sender.Send(new InviteToGroupCommand(groupId, request.UserId), cancellationToken);
             return NoContent();
+        }
+
+        [HttpGet("{groupId:guid}/balance")]
+        public async Task<ActionResult<GroupBalanceResponse>> GetBalance(
+            Guid groupId,
+            [FromQuery] bool simplify,
+            CancellationToken cancellationToken)
+        {
+            var report = await _sender.Send(new GetGroupBalanceQuery(groupId, simplify), cancellationToken);
+            return Ok(report.ToResponse());
         }
     }
 }
