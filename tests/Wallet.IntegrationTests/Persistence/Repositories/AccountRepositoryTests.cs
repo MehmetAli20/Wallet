@@ -10,6 +10,8 @@ using Wallet.IntegrationTests;
 
 public class AccountRepositoryTests : IClassFixture<PostgresFixture>
 {
+        private static readonly Guid GroupId = Guid.NewGuid();
+
     private readonly PostgresFixture _fixture;
     public AccountRepositoryTests(PostgresFixture fixture) => _fixture = fixture;
 
@@ -24,8 +26,8 @@ public class AccountRepositoryTests : IClassFixture<PostgresFixture>
             var repo = new AccountRepository(context);
             var unitOfWork = new UnitOfWork(context);
             var account = new Account(id, ownerId, "USD");
-            account.Credit(new Money(50m, "USD"));
-            account.Debit(new Money(20m, "USD"));
+            account.Credit(new Money(50m, "USD"), GroupId);
+            account.Debit(new Money(20m, "USD"), GroupId);
 
             await repo.AddAsync(account);
             await unitOfWork.SaveChangesAsync();

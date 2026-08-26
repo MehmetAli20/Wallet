@@ -6,6 +6,7 @@ using System.Text;
 using Wallet.Application.Common.Behaviors;
 using Wallet.Application.Transfers;
 using Wallet.Application.Users;
+using Wallet.Domain.Expenses;
 using Wallet.Domain.Transfers;
 
 namespace Wallet.Application
@@ -15,6 +16,7 @@ namespace Wallet.Application
         public static IServiceCollection AddApplication(this IServiceCollection services)
         {
             services.AddScoped<TransferService>();
+            services.AddScoped<ExpensePostingService>();
             services.AddScoped<AdminUserSeeder>();
             services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
             services.AddMediatR(cfg =>

@@ -8,6 +8,8 @@ namespace Wallet.UnitTests.Domain.Transfers
 {
     public class TransferServiceTests
     {
+        private static readonly Guid GroupId = Guid.NewGuid();
+
         private readonly TransferService _service = new();
 
         private static Account NewAccount(string currency = "USD") =>
@@ -19,7 +21,7 @@ namespace Wallet.UnitTests.Domain.Transfers
             var source = NewAccount();
             var destination = NewAccount();
 
-            _service.Transfer(source, destination, new Money(40m, "USD"));
+            _service.Transfer(source, destination, new Money(40m, "USD"), GroupId);
 
             source.Balance.Should().Be(new Money(-40m, "USD"));
             destination.Balance.Should().Be(new Money(40m, "USD"));
@@ -31,7 +33,7 @@ namespace Wallet.UnitTests.Domain.Transfers
             var source = NewAccount();
             var destination = NewAccount();
 
-            _service.Transfer(source, destination, new Money(40m, "USD"));
+            _service.Transfer(source, destination, new Money(40m, "USD"), GroupId);
 
             source.Entries.Should().ContainSingle();
             source.Entries[0].Type.Should().Be(LedgerEntryType.Debit);
@@ -49,7 +51,7 @@ namespace Wallet.UnitTests.Domain.Transfers
             var destination = NewAccount();
             var totalBefore = source.Balance.Amount + destination.Balance.Amount;
 
-            _service.Transfer(source, destination, new Money(40m, "USD"));
+            _service.Transfer(source, destination, new Money(40m, "USD"), GroupId);
 
             var totalAfter = source.Balance.Amount + destination.Balance.Amount;
             totalAfter.Should().Be(totalBefore);
@@ -58,7 +60,7 @@ namespace Wallet.UnitTests.Domain.Transfers
         [Fact]
         public void Transfer_WithNullSource_Throws()
         {
-            var act = () => _service.Transfer(null!, NewAccount(), new Money(40m, "USD"));
+            var act = () => _service.Transfer(null!, NewAccount(), new Money(40m, "USD"), GroupId);
 
             act.Should().Throw<ArgumentNullException>();
         }
@@ -66,7 +68,7 @@ namespace Wallet.UnitTests.Domain.Transfers
         [Fact]
         public void Transfer_WithNullDestination_Throws()
         {
-            var act = () => _service.Transfer(NewAccount(), null!, new Money(40m, "USD"));
+            var act = () => _service.Transfer(NewAccount(), null!, new Money(40m, "USD"), GroupId);
 
             act.Should().Throw<ArgumentNullException>();
         }
@@ -74,7 +76,7 @@ namespace Wallet.UnitTests.Domain.Transfers
         [Fact]
         public void Transfer_WithNullAmount_Throws()
         {
-            var act = () => _service.Transfer(NewAccount(), NewAccount(), null!);
+            var act = () => _service.Transfer(NewAccount(), NewAccount(), null!, GroupId);
 
             act.Should().Throw<ArgumentNullException>();
         }
@@ -84,7 +86,7 @@ namespace Wallet.UnitTests.Domain.Transfers
         {
             var account = NewAccount();
 
-            var act = () => _service.Transfer(account, account, new Money(40m, "USD"));
+            var act = () => _service.Transfer(account, account, new Money(40m, "USD"), GroupId);
 
             act.Should().Throw<InvalidOperationException>();
         }
@@ -94,7 +96,7 @@ namespace Wallet.UnitTests.Domain.Transfers
         [InlineData(-40)]
         public void Transfer_WithNonPositiveAmount_Throws(decimal amount)
         {
-            var act = () => _service.Transfer(NewAccount(), NewAccount(), new Money(amount, "USD"));
+            var act = () => _service.Transfer(NewAccount(), NewAccount(), new Money(amount, "USD"), GroupId);
 
             act.Should().Throw<ArgumentException>();
         }
@@ -105,7 +107,7 @@ namespace Wallet.UnitTests.Domain.Transfers
             var source = NewAccount();
             var destination = NewAccount();
 
-            _service.Transfer(source, destination, new Money(150m, "USD"));
+            _service.Transfer(source, destination, new Money(150m, "USD"), GroupId);
 
             source.Balance.Should().Be(new Money(-150m, "USD"));
             destination.Balance.Should().Be(new Money(150m, "USD"));
@@ -119,7 +121,7 @@ namespace Wallet.UnitTests.Domain.Transfers
             var source = NewAccount("USD");
             var destination = NewAccount("EUR");
 
-            var act = () => _service.Transfer(source, destination, new Money(40m, "USD"));
+            var act = () => _service.Transfer(source, destination, new Money(40m, "USD"), GroupId);
 
             act.Should().Throw<CurrencyMismatchException>();
             source.Balance.Should().Be(new Money(0m, "USD"));
@@ -134,7 +136,7 @@ namespace Wallet.UnitTests.Domain.Transfers
             var source = NewAccount("USD");
             var destination = NewAccount("USD");
 
-            var act = () => _service.Transfer(source, destination, new Money(40m, "EUR"));
+            var act = () => _service.Transfer(source, destination, new Money(40m, "EUR"), GroupId);
 
             act.Should().Throw<CurrencyMismatchException>();
             source.Balance.Should().Be(new Money(0m, "USD"));

@@ -1,4 +1,4 @@
-﻿namespace Wallet.Api.Contracts.Transfers
+namespace Wallet.Api.Contracts.Transfers
 {
-    public record TransferRequest(Guid RecipientUserId, decimal Amount, string Currency);
+    public record TransferRequest(Guid GroupId, Guid RecipientUserId, decimal Amount);
 }

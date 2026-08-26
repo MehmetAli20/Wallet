@@ -23,7 +23,7 @@ namespace Wallet.Api.Controllers
         [HttpPost]
         public async Task<IActionResult> Transfer(TransferRequest request, [FromHeader(Name ="Idempotency-Key")] string idempotencyKey, CancellationToken cancellationToken)
         {
-            await _sender.Send(new TransferMoneyCommand(request.RecipientUserId, request.Amount, request.Currency, idempotencyKey), cancellationToken);
+            await _sender.Send(new TransferMoneyCommand(request.GroupId, request.RecipientUserId, request.Amount, idempotencyKey), cancellationToken);
             return NoContent();
         }
     }

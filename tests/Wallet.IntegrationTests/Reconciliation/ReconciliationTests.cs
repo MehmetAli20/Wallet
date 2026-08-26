@@ -11,6 +11,8 @@ namespace Wallet.IntegrationTests.Reconciliation
 {
     public class ReconciliationTests : IClassFixture<PostgresFixture>
     {
+        private static readonly Guid GroupId = Guid.NewGuid();
+
         private readonly PostgresFixture _fixture;
         public ReconciliationTests(PostgresFixture fixture) => _fixture = fixture;
 
@@ -27,7 +29,7 @@ namespace Wallet.IntegrationTests.Reconciliation
 
             await repository.AddAsync(source);
             await repository.AddAsync(destination);
-            new TransferService().Transfer(source, destination, new Money(40m, currency));
+            new TransferService().Transfer(source, destination, new Money(40m, currency), GroupId);
             await new UnitOfWork(context).SaveChangesAsync();
 
             return (sourceId, destinationId);

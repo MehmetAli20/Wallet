@@ -9,7 +9,7 @@ namespace Wallet.Domain.Transfers
 {
     public class TransferService
     {
-        public void Transfer(Account source, Account destination, Money amount)
+        public void Transfer(Account source, Account destination, Money amount, Guid groupId)
         {
             if (source == null)
             {
@@ -41,8 +41,8 @@ namespace Wallet.Domain.Transfers
                 throw new CurrencyMismatchException(destination.Balance.Currency, source.Balance.Currency);
             }
 
-            source.Debit(amount);
-            destination.Credit(amount);
+            source.Debit(amount, groupId);
+            destination.Credit(amount, groupId);
         }
     }
 }
