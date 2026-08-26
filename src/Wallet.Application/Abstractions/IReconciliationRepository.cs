@@ -1,4 +1,4 @@
-using Wallet.Domain.Reconciliation;
+﻿using Wallet.Domain.Reconciliation;
 
 namespace Wallet.Application.Abstractions
 {
@@ -9,5 +9,6 @@ namespace Wallet.Application.Abstractions
         Task<IReadOnlyList<CurrencyNetPosition>> GetNetPositionsAsync(CancellationToken cancellationToken = default);
 
         Task<IReadOnlyList<AccountDiscrepancy>> GetAccountDiscrepanciesAsync(CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<ContextBalance>> GetContextBalancesAsync(CancellationToken cancellationToken = default);
     }
 }

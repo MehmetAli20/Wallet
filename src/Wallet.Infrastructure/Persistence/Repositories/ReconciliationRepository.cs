@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Wallet.Application.Abstractions;
 using Wallet.Domain.Accounts;
 using Wallet.Domain.Reconciliation;
@@ -69,6 +69,21 @@ namespace Wallet.Infrastructure.Persistence.Repositories
             return rows
                 .Select(x => new AccountDiscrepancy(x.Id, x.Currency, x.Balance, x.LedgerNet))
                 .ToList();
+        }
+
+        public async Task<IReadOnlyList<ContextBalance>> GetContextBalancesAsync(CancellationToken cancellationToken = default)
+        {
+            var rows = await _context.Set<LedgerEntry>()
+                .IgnoreQueryFilters()
+                .GroupBy(e => e.GroupId)
+                .Select(g => new
+                {
+                    GroupId = g.Key,
+                    Net = g.Sum(e => e.Type == LedgerEntryType.Credit ? e.Amount.Amount : -e.Amount.Amount)
+                })
+                .ToListAsync(cancellationToken);
+
+            return rows.Select(r => new ContextBalance(r.GroupId, r.Net)).ToList();
         }
     }
 }

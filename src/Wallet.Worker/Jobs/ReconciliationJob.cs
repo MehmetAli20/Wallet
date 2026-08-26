@@ -39,6 +39,10 @@ namespace Wallet.Worker.Jobs
                 _logger.LogCritical("ACCOUNT BALANCE DRIFT {AccountId} {Currency}: balance {Balance}, ledger {LedgerNet}, diff {Difference}",
                     d.AccountId, d.Currency, d.Balance, d.LedgerNet, d.Difference);
 
+            foreach (var c in report.ContextBalances.Where(x => !x.IsBalanced))
+                _logger.LogCritical("CONTEXT DOES NOT NET TO ZERO {GroupId}: net {Net}",
+                    c.GroupId, c.Net);
+
             throw new InvalidOperationException("Reconciliation failed. See logs for details.");
         }
     }

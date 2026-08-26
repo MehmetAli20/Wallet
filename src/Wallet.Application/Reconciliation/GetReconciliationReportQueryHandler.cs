@@ -21,8 +21,9 @@ namespace Wallet.Application.Reconciliation
             var totals = await _reconciliation.GetLedgerTotalsAsync(cancellationToken);
             var positions = await _reconciliation.GetNetPositionsAsync(cancellationToken);
             var discrepancies = await _reconciliation.GetAccountDiscrepanciesAsync(cancellationToken);
+            var contexts = await _reconciliation.GetContextBalancesAsync(cancellationToken);
 
-            return new LedgerReconciliationReport(totals, positions, discrepancies);
+            return new LedgerReconciliationReport(totals, positions, discrepancies, contexts);
         }
     }
 }
