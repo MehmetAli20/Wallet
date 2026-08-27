@@ -28,7 +28,7 @@ namespace Wallet.IntegrationTests.Reconciliation
 
             await repository.AddAsync(source);
             await repository.AddAsync(destination);
-            new TransferService().Transfer(source, destination, new Money(40m, currency), groupId);
+            new TransferService().Settle(source, destination, new Money(40m, currency), groupId);
             await new UnitOfWork(context).SaveChangesAsync();
 
             return (sourceId, destinationId, groupId);

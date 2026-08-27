@@ -5,6 +5,7 @@ using Wallet.Api.Contracts.Expenses.Requests;
 using Wallet.Api.Contracts.Groups.Requests;
 using Wallet.Api.Contracts.Groups.Responses;
 using Wallet.Api.Contracts.Invitations.Responses;
+using Wallet.Api.Contracts.Transfers;
 
 namespace Wallet.IntegrationTests.Api
 {
@@ -226,6 +227,74 @@ namespace Wallet.IntegrationTests.Api
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
 
+        [Fact]
+        public async Task SettlingInFull_ClearsThePayersDebt_AndRemovesThePairFromTheDebtList()
+        {
+            var (groupId, members) = await GroupOfAsync(3);
+            var creditor = members[0];
+            var debtor = members[1];
+
+            await PostExpenseAsync(creditor, new CreateExpenseRequest(
+                groupId, creditor.Id, 90m, "Market", DateTimeOffset.UtcNow, Participants(members)));
+
+            var before = await BalanceAsync(debtor, groupId);
+            before.Debts.Should()
+                .ContainSingle(d => d.DebtorId == debtor.Id && d.CreditorId == creditor.Id)
+                .Which.Amount.Should().Be(30m);
+
+            var settle = await SettleAsync(debtor, groupId, creditor, 30m);
+            settle.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            var after = await BalanceAsync(debtor, groupId);
+
+            Net(after, debtor.Id).Should().Be(0m);
+            Net(after, creditor.Id).Should().Be(30m);
+            after.Debts.Should().NotContain(d => d.DebtorId == debtor.Id || d.CreditorId == debtor.Id);
+            after.Positions.Sum(p => p.Net).Should().Be(0m);
+        }
+
+        [Fact]
+        public async Task SettlingPartially_LeavesTheRemainderStanding()
+        {
+            var (groupId, members) = await GroupOfAsync(3);
+            var creditor = members[0];
+            var debtor = members[1];
+
+            await PostExpenseAsync(creditor, new CreateExpenseRequest(
+                groupId, creditor.Id, 90m, "Market", DateTimeOffset.UtcNow, Participants(members)));
+
+            await SettleAsync(debtor, groupId, creditor, 10m);
+
+            var after = await BalanceAsync(debtor, groupId);
+
+            Net(after, debtor.Id).Should().Be(-20m);
+            after.Debts.Should()
+                .ContainSingle(d => d.DebtorId == debtor.Id && d.CreditorId == creditor.Id)
+                .Which.Amount.Should().Be(20m);
+        }
+
+        [Fact]
+        public async Task OverSettling_TurnsTheDebtorIntoTheCreditor()
+        {
+            var (groupId, members) = await GroupOfAsync(3);
+            var creditor = members[0];
+            var debtor = members[1];
+
+            await PostExpenseAsync(creditor, new CreateExpenseRequest(
+                groupId, creditor.Id, 90m, "Market", DateTimeOffset.UtcNow, Participants(members)));
+
+            await SettleAsync(debtor, groupId, creditor, 50m);
+
+            var after = await BalanceAsync(debtor, groupId);
+
+            Net(after, debtor.Id).Should().Be(20m);
+            Net(after, creditor.Id).Should().Be(10m);
+            after.Debts.Should()
+                .ContainSingle(d => d.DebtorId == creditor.Id && d.CreditorId == debtor.Id)
+                .Which.Amount.Should().Be(20m);
+            after.Positions.Sum(p => p.Net).Should().Be(0m);
+        }
+
         private static async Task<Guid> CreateGroupAsync(TestUser owner, string currency = "TRY")
         {
             var created = await owner.Client.PostAsJsonAsync(
@@ -287,6 +356,18 @@ namespace Wallet.IntegrationTests.Api
             message.Headers.Add("Idempotency-Key", idempotencyKey ?? Guid.NewGuid().ToString());
 
             return await sender.Client.SendAsync(message);
+        }
+
+        private static async Task<HttpResponseMessage> SettleAsync(
+            TestUser payer, Guid groupId, TestUser payee, decimal amount, string? idempotencyKey = null)
+        {
+            using var message = new HttpRequestMessage(HttpMethod.Post, "/api/transfers")
+            {
+                Content = JsonContent.Create(new TransferRequest(groupId, payee.Id, amount))
+            };
+            message.Headers.Add("Idempotency-Key", idempotencyKey ?? Guid.NewGuid().ToString());
+
+            return await payer.Client.SendAsync(message);
         }
 
         private static async Task<GroupBalanceResponse> BalanceAsync(

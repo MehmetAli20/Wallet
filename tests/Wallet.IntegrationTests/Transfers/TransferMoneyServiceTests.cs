@@ -96,15 +96,15 @@ namespace Wallet.IntegrationTests.Transfers
                 var source = await repository.GetByOwnerAndCurrencyAsync(sender, "USD");
                 var destination = await repository.GetByOwnerAndCurrencyAsync(recipient, "USD");
 
-                source!.Balance.Should().Be(new Money(-30m, "USD"));
-                destination!.Balance.Should().Be(new Money(30m, "USD"));
+                source!.Balance.Should().Be(new Money(30m, "USD"));
+                destination!.Balance.Should().Be(new Money(-30m, "USD"));
 
                 source.Entries.Should().ContainSingle();
-                source.Entries[0].Type.Should().Be(LedgerEntryType.Debit);
+                source.Entries[0].Type.Should().Be(LedgerEntryType.Credit);
                 source.Entries[0].GroupId.Should().Be(groupId);
 
                 destination.Entries.Should().ContainSingle();
-                destination.Entries[0].Type.Should().Be(LedgerEntryType.Credit);
+                destination.Entries[0].Type.Should().Be(LedgerEntryType.Debit);
                 destination.Entries[0].GroupId.Should().Be(groupId);
             }
         }
@@ -233,7 +233,7 @@ namespace Wallet.IntegrationTests.Transfers
                 var source = await repository.GetByIdAsync(sourceId);
                 var destination = await repository.GetByIdAsync(destinationId);
 
-                new TransferService().Transfer(source!, destination!, new Money(40m, "USD"), groupId);
+                new TransferService().Settle(source!, destination!, new Money(40m, "USD"), groupId);
 
                 context.Set<LedgerEntry>().Add(new LedgerEntry(
                     Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), groupId, Guid.NewGuid(),
@@ -276,10 +276,10 @@ namespace Wallet.IntegrationTests.Transfers
 
             var transferService = new TransferService();
 
-            transferService.Transfer(sourceA!, destinationA!, new Money(80m, "USD"), groupId);
+            transferService.Settle(sourceA!, destinationA!, new Money(80m, "USD"), groupId);
             await new UnitOfWork(contextA).SaveChangesAsync();
 
-            transferService.Transfer(sourceB!, destinationB!, new Money(80m, "USD"), groupId);
+            transferService.Settle(sourceB!, destinationB!, new Money(80m, "USD"), groupId);
 
             var act = async () => await new UnitOfWork(contextB).SaveChangesAsync();
             await act.Should().ThrowAsync<ConcurrencyConflictException>();

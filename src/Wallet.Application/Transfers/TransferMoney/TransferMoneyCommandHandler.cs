@@ -43,10 +43,10 @@ namespace Wallet.Application.Transfers.TransferMoney
             if (!group.IsActiveMember(request.RecipientUserId))
                 throw new InvalidTransferException("The recipient is not an active member of this group.");
 
-            var source = await ResolveAccountAsync(_currentUser.UserId, group.Currency, cancellationToken);
-            var destination = await ResolveAccountAsync(request.RecipientUserId, group.Currency, cancellationToken);
+            var payer = await ResolveAccountAsync(_currentUser.UserId, group.Currency, cancellationToken);
+            var payee = await ResolveAccountAsync(request.RecipientUserId, group.Currency, cancellationToken);
 
-            _transferService.Transfer(source, destination, new Money(request.Amount, group.Currency), group.Id);
+            _transferService.Settle(payer, payee, new Money(request.Amount, group.Currency), group.Id);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }

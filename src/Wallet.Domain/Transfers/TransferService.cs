@@ -9,40 +9,40 @@ namespace Wallet.Domain.Transfers
 {
     public class TransferService
     {
-        public void Transfer(Account source, Account destination, Money amount, Guid groupId)
+        public void Settle(Account payer, Account payee, Money amount, Guid groupId)
         {
-            if (source == null)
+            if (payer == null)
             {
-                throw new ArgumentNullException(nameof(source));
+                throw new ArgumentNullException(nameof(payer));
             }
 
-            if (destination == null)
+            if (payee == null)
             {
-                throw new ArgumentNullException(nameof(destination));
+                throw new ArgumentNullException(nameof(payee));
             }
 
             if (amount == null)
             {
                 throw new ArgumentNullException(nameof(amount));
             }
-            
-            if(amount.Amount <= 0)
+
+            if (amount.Amount <= 0)
             {
-                throw new ArgumentException("Transfer amount must be greater than zero.", nameof(amount));
+                throw new ArgumentException("Settlement amount must be greater than zero.", nameof(amount));
             }
 
-            if (source.Id == destination.Id)
+            if (payer.Id == payee.Id)
             {
-                throw new InvalidOperationException("Source and destination accounts must be different.");
+                throw new InvalidOperationException("Payer and payee accounts must be different.");
             }
 
-            if (source.Balance.Currency != destination.Balance.Currency || destination.Balance.Currency != amount.Currency)
+            if (payer.Balance.Currency != payee.Balance.Currency || payee.Balance.Currency != amount.Currency)
             {
-                throw new CurrencyMismatchException(destination.Balance.Currency, source.Balance.Currency);
+                throw new CurrencyMismatchException(payee.Balance.Currency, payer.Balance.Currency);
             }
 
-            source.Debit(amount, groupId, destination.OwnerId);
-            destination.Credit(amount, groupId, source.OwnerId);
+            payer.Credit(amount, groupId, payee.OwnerId);
+            payee.Debit(amount, groupId, payer.OwnerId);
         }
     }
 }

@@ -16,77 +16,77 @@ namespace Wallet.UnitTests.Domain.Transfers
             new(Guid.NewGuid(), Guid.NewGuid(), currency);
 
         [Fact]
-        public void Transfer_WithValidInput_MovesMoneyBetweenAccounts()
+        public void Settle_WithValidInput_MovesThePayerTowardZero()
         {
-            var source = NewAccount();
-            var destination = NewAccount();
+            var payer = NewAccount();
+            var payee = NewAccount();
 
-            _service.Transfer(source, destination, new Money(40m, "USD"), GroupId);
+            _service.Settle(payer, payee, new Money(40m, "USD"), GroupId);
 
-            source.Balance.Should().Be(new Money(-40m, "USD"));
-            destination.Balance.Should().Be(new Money(40m, "USD"));
+            payer.Balance.Should().Be(new Money(40m, "USD"));
+            payee.Balance.Should().Be(new Money(-40m, "USD"));
         }
 
         [Fact]
-        public void Transfer_RecordsDebitOnSourceAndCreditOnDestination()
+        public void Settle_RecordsCreditOnPayerAndDebitOnPayee()
         {
-            var source = NewAccount();
-            var destination = NewAccount();
+            var payer = NewAccount();
+            var payee = NewAccount();
 
-            _service.Transfer(source, destination, new Money(40m, "USD"), GroupId);
+            _service.Settle(payer, payee, new Money(40m, "USD"), GroupId);
 
-            source.Entries.Should().ContainSingle();
-            source.Entries[0].Type.Should().Be(LedgerEntryType.Debit);
-            source.Entries[0].Amount.Should().Be(new Money(40m, "USD"));
+            payer.Entries.Should().ContainSingle();
+            payer.Entries[0].Type.Should().Be(LedgerEntryType.Credit);
+            payer.Entries[0].Amount.Should().Be(new Money(40m, "USD"));
 
-            destination.Entries.Should().ContainSingle();
-            destination.Entries[0].Type.Should().Be(LedgerEntryType.Credit);
-            destination.Entries[0].Amount.Should().Be(new Money(40m, "USD"));
+            payee.Entries.Should().ContainSingle();
+            payee.Entries[0].Type.Should().Be(LedgerEntryType.Debit);
+            payee.Entries[0].Amount.Should().Be(new Money(40m, "USD"));
         }
 
         [Fact]
-        public void Transfer_ConservesTotalMoney()
+        public void Settle_ConservesTotalMoney()
         {
-            var source = NewAccount();
-            var destination = NewAccount();
-            var totalBefore = source.Balance.Amount + destination.Balance.Amount;
+            var payer = NewAccount();
+            var payee = NewAccount();
+            var totalBefore = payer.Balance.Amount + payee.Balance.Amount;
 
-            _service.Transfer(source, destination, new Money(40m, "USD"), GroupId);
+            _service.Settle(payer, payee, new Money(40m, "USD"), GroupId);
 
-            var totalAfter = source.Balance.Amount + destination.Balance.Amount;
+            var totalAfter = payer.Balance.Amount + payee.Balance.Amount;
             totalAfter.Should().Be(totalBefore);
         }
 
         [Fact]
-        public void Transfer_WithNullSource_Throws()
+        public void Settle_WithNullPayer_Throws()
         {
-            var act = () => _service.Transfer(null!, NewAccount(), new Money(40m, "USD"), GroupId);
+            var act = () => _service.Settle(null!, NewAccount(), new Money(40m, "USD"), GroupId);
 
             act.Should().Throw<ArgumentNullException>();
         }
 
         [Fact]
-        public void Transfer_WithNullDestination_Throws()
+        public void Settle_WithNullPayee_Throws()
         {
-            var act = () => _service.Transfer(NewAccount(), null!, new Money(40m, "USD"), GroupId);
+            var act = () => _service.Settle(NewAccount(), null!, new Money(40m, "USD"), GroupId);
 
             act.Should().Throw<ArgumentNullException>();
         }
 
         [Fact]
-        public void Transfer_WithNullAmount_Throws()
+        public void Settle_WithNullAmount_Throws()
         {
-            var act = () => _service.Transfer(NewAccount(), NewAccount(), null!, GroupId);
+            var act = () => _service.Settle(NewAccount(), NewAccount(), null!, GroupId);
 
             act.Should().Throw<ArgumentNullException>();
         }
 
         [Fact]
-        public void Transfer_ToSameAccount_Throws()
+        public void Settle_ToTheSameAccount_Throws()
         {
             var account = NewAccount();
 
-            var act = () => _service.Transfer(account, account, new Money(40m, "USD"), GroupId);
+            var act = () => _service.Settle(account, account, new Money(40m, "USD"), GroupId);
 
             act.Should().Throw<InvalidOperationException>();
         }
@@ -94,55 +94,55 @@ namespace Wallet.UnitTests.Domain.Transfers
         [Theory]
         [InlineData(0)]
         [InlineData(-40)]
-        public void Transfer_WithNonPositiveAmount_Throws(decimal amount)
+        public void Settle_WithNonPositiveAmount_Throws(decimal amount)
         {
-            var act = () => _service.Transfer(NewAccount(), NewAccount(), new Money(amount, "USD"), GroupId);
+            var act = () => _service.Settle(NewAccount(), NewAccount(), new Money(amount, "USD"), GroupId);
 
             act.Should().Throw<ArgumentException>();
         }
 
         [Fact]
-        public void Transfer_BeyondSourceBalance_Succeeds_AndSourceGoesNegative()
+        public void Settle_BeyondWhatIsOwed_TurnsThePayerIntoACreditor()
         {
-            var source = NewAccount();
-            var destination = NewAccount();
+            var payer = NewAccount();
+            var payee = NewAccount();
 
-            _service.Transfer(source, destination, new Money(150m, "USD"), GroupId);
+            _service.Settle(payer, payee, new Money(150m, "USD"), GroupId);
 
-            source.Balance.Should().Be(new Money(-150m, "USD"));
-            destination.Balance.Should().Be(new Money(150m, "USD"));
-            source.Entries.Should().ContainSingle();
-            destination.Entries.Should().ContainSingle();
+            payer.Balance.Should().Be(new Money(150m, "USD"));
+            payee.Balance.Should().Be(new Money(-150m, "USD"));
+            payer.Entries.Should().ContainSingle();
+            payee.Entries.Should().ContainSingle();
         }
 
         [Fact]
-        public void Transfer_WithMismatchedDestinationCurrency_ThrowsAndLeavesBothAccountsUnchanged()
+        public void Settle_WithMismatchedPayeeCurrency_ThrowsAndLeavesBothAccountsUnchanged()
         {
-            var source = NewAccount("USD");
-            var destination = NewAccount("EUR");
+            var payer = NewAccount("USD");
+            var payee = NewAccount("EUR");
 
-            var act = () => _service.Transfer(source, destination, new Money(40m, "USD"), GroupId);
+            var act = () => _service.Settle(payer, payee, new Money(40m, "USD"), GroupId);
 
             act.Should().Throw<CurrencyMismatchException>();
-            source.Balance.Should().Be(new Money(0m, "USD"));
-            destination.Balance.Should().Be(new Money(0m, "EUR"));
-            source.Entries.Should().BeEmpty();
-            destination.Entries.Should().BeEmpty();
+            payer.Balance.Should().Be(new Money(0m, "USD"));
+            payee.Balance.Should().Be(new Money(0m, "EUR"));
+            payer.Entries.Should().BeEmpty();
+            payee.Entries.Should().BeEmpty();
         }
 
         [Fact]
-        public void Transfer_WithMismatchedAmountCurrency_Throws()
+        public void Settle_WithMismatchedAmountCurrency_Throws()
         {
-            var source = NewAccount("USD");
-            var destination = NewAccount("USD");
+            var payer = NewAccount("USD");
+            var payee = NewAccount("USD");
 
-            var act = () => _service.Transfer(source, destination, new Money(40m, "EUR"), GroupId);
+            var act = () => _service.Settle(payer, payee, new Money(40m, "EUR"), GroupId);
 
             act.Should().Throw<CurrencyMismatchException>();
-            source.Balance.Should().Be(new Money(0m, "USD"));
-            destination.Balance.Should().Be(new Money(0m, "USD"));
-            source.Entries.Should().BeEmpty();
-            destination.Entries.Should().BeEmpty();
+            payer.Balance.Should().Be(new Money(0m, "USD"));
+            payee.Balance.Should().Be(new Money(0m, "USD"));
+            payer.Entries.Should().BeEmpty();
+            payee.Entries.Should().BeEmpty();
         }
     }
 }
