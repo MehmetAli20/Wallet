@@ -10,6 +10,7 @@
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
     <PackageReference Include="FluentAssertions" Version="8.10.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.11" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="Testcontainers.PostgreSql" Version="4.13.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
@@ -24,6 +25,7 @@
     <ProjectReference Include="..\..\src\Wallet.Infrastructure\Wallet.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Wallet.Application\Wallet.Application.csproj" />
     <ProjectReference Include="..\..\src\Wallet.Domain\Wallet.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Wallet.Api\Wallet.Api.csproj" />
   </ItemGroup>
 
 </Project>
