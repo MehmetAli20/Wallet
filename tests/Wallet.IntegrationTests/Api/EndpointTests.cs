@@ -1,10 +1,8 @@
 using System.Net;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FluentAssertions;
 using Wallet.Api.Contracts.Groups.Requests;
 using Wallet.Api.Contracts.Groups.Responses;
-using Wallet.Api.Contracts.Users;
 
 namespace Wallet.IntegrationTests.Api
 {
@@ -13,25 +11,6 @@ namespace Wallet.IntegrationTests.Api
         private readonly ApiFixture _fixture;
 
         public EndpointTests(ApiFixture fixture) => _fixture = fixture;
-
-        private async Task<HttpClient> AuthenticatedClientAsync()
-        {
-            var client = _fixture.CreateClient();
-            var username = $"u{Guid.NewGuid():N}"[..20];
-
-            var register = await client.PostAsJsonAsync("/api/auth/register",
-                new RegisterRequest(username, $"{username}@test.com", "password123"));
-            register.StatusCode.Should().Be(HttpStatusCode.Created);
-
-            var login = await client.PostAsJsonAsync("/api/auth/login",
-                new LoginRequest(username, "password123"));
-            login.StatusCode.Should().Be(HttpStatusCode.OK);
-
-            var token = (await login.Content.ReadFromJsonAsync<LoginResponse>())!.Token;
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-            return client;
-        }
 
         [Fact]
         public async Task ProtectedEndpoint_WithoutToken_Returns401()
@@ -56,7 +35,7 @@ namespace Wallet.IntegrationTests.Api
         [Fact]
         public async Task RegisterThenLogin_ReturnsAUsableToken()
         {
-            var client = await AuthenticatedClientAsync();
+            var client = (await _fixture.RegisterAsync()).Client;
 
             var response = await client.GetAsync("/api/groups");
 
@@ -66,7 +45,7 @@ namespace Wallet.IntegrationTests.Api
         [Fact]
         public async Task CreateGroup_ThenListGroups_ReturnsIt()
         {
-            var client = await AuthenticatedClientAsync();
+            var client = (await _fixture.RegisterAsync()).Client;
 
             var created = await client.PostAsJsonAsync("/api/groups", new CreateGroupRequest("Piknik", "TRY"));
             created.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -82,7 +61,7 @@ namespace Wallet.IntegrationTests.Api
         [Fact]
         public async Task CreateGroup_WithInvalidPayload_Returns400()
         {
-            var client = await AuthenticatedClientAsync();
+            var client = (await _fixture.RegisterAsync()).Client;
 
             var response = await client.PostAsJsonAsync("/api/groups", new CreateGroupRequest("", "TRY"));
 
@@ -92,7 +71,7 @@ namespace Wallet.IntegrationTests.Api
         [Fact]
         public async Task GroupBalance_RouteParameterBinds()
         {
-            var client = await AuthenticatedClientAsync();
+            var client = (await _fixture.RegisterAsync()).Client;
 
             var created = await client.PostAsJsonAsync("/api/groups", new CreateGroupRequest("Piknik", "TRY"));
             var groupId = await created.Content.ReadFromJsonAsync<Guid>();
@@ -107,7 +86,7 @@ namespace Wallet.IntegrationTests.Api
         [Fact]
         public async Task GroupBalance_ForAGroupYouAreNotIn_Returns404()
         {
-            var client = await AuthenticatedClientAsync();
+            var client = (await _fixture.RegisterAsync()).Client;
 
             var response = await client.GetAsync($"/api/groups/{Guid.NewGuid()}/balance");
 

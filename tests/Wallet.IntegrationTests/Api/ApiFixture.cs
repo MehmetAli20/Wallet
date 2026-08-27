@@ -1,11 +1,18 @@
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Testcontainers.PostgreSql;
+using Wallet.Api.Contracts.Users;
 using Wallet.Infrastructure.Persistence;
 
 namespace Wallet.IntegrationTests.Api
 {
+    public sealed record TestUser(Guid Id, HttpClient Client);
+
     public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
     {
         private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:17").Build();
@@ -34,6 +41,26 @@ namespace Wallet.IntegrationTests.Api
         {
             await _container.DisposeAsync();
             await base.DisposeAsync();
+        }
+
+        public async Task<TestUser> RegisterAsync()
+        {
+            var client = CreateClient();
+            var username = $"u{Guid.NewGuid():N}"[..20];
+
+            var register = await client.PostAsJsonAsync("/api/auth/register",
+                new RegisterRequest(username, $"{username}@test.com", "password123"));
+            register.StatusCode.Should().Be(HttpStatusCode.Created);
+            var userId = (await register.Content.ReadFromJsonAsync<RegisterResponse>())!.UserId;
+
+            var login = await client.PostAsJsonAsync("/api/auth/login",
+                new LoginRequest(username, "password123"));
+            login.StatusCode.Should().Be(HttpStatusCode.OK);
+            var token = (await login.Content.ReadFromJsonAsync<LoginResponse>())!.Token;
+
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            return new TestUser(userId, client);
         }
     }
 }
