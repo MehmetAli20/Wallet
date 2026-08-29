@@ -27,6 +27,15 @@ namespace Wallet.Infrastructure.Persistence.Configurations
         }
     }
 
+    public class GroupActivityReadConfiguration : IEntityTypeConfiguration<GroupActivityRead>
+    {
+        public void Configure(EntityTypeBuilder<GroupActivityRead> builder)
+        {
+            builder.ToTable("GroupActivityReads");
+            builder.HasKey(r => new { r.UserId, r.GroupId });
+        }
+    }
+
     public class SettlementConfiguration : IEntityTypeConfiguration<Settlement>
     {
         public void Configure(EntityTypeBuilder<Settlement> builder)

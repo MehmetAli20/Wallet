@@ -14,6 +14,10 @@ namespace Wallet.Api.Contracts.Activity.Responses
         string? Description,
         DateTimeOffset OccurredAt);
 
+    public record MarkActivitySeenRequest(long Sequence);
+
+    public record GroupUnreadCountResponse(Guid GroupId, int Unread);
+
     public static class ActivityMappings
     {
         public static ActivityEntryResponse ToResponse(this ActivityEntry entry) =>
@@ -28,5 +32,8 @@ namespace Wallet.Api.Contracts.Activity.Responses
                 entry.Currency,
                 entry.Description,
                 entry.OccurredAt);
+
+        public static GroupUnreadCountResponse ToResponse(this GroupUnreadCount count) =>
+            new(count.GroupId, count.Unread);
     }
 }

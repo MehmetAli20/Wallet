@@ -526,6 +526,95 @@ namespace Wallet.IntegrationTests.Api
                 .Which.ActorId.Should().Be(members[1].Id);
         }
 
+        [Fact]
+        public async Task YourOwnActionsAreNeverUnread()
+        {
+            var (groupId, members) = await GroupOfAsync(3);
+            var author = members[0];
+
+            var before = await UnreadCountAsync(author, groupId);
+
+            await CreateExpenseAsync(author, groupId, 90m, members);
+
+            var after = await UnreadCountAsync(author, groupId);
+
+            after.Should().Be(before);
+        }
+
+        [Fact]
+        public async Task SomeoneElsesExpense_ShowsUpAsUnread_UntilYouMarkItSeen()
+        {
+            var (groupId, members) = await GroupOfAsync(3);
+            var author = members[0];
+            var reader = members[1];
+
+            await CreateExpenseAsync(author, groupId, 90m, members);
+
+            var before = await UnreadAsync(reader);
+            before.Should().ContainSingle(u => u.GroupId == groupId)
+                .Which.Unread.Should().BeGreaterThan(0);
+
+            var feed = await ActivityAsync(reader, groupId);
+            var newest = feed.Max(e => e.Sequence);
+
+            var seen = await MarkSeenAsync(reader, groupId, newest);
+            seen.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            var after = await UnreadAsync(reader);
+            after.Should().NotContain(u => u.GroupId == groupId);
+        }
+
+        [Fact]
+        public async Task WhatHappensAfterYouLooked_BecomesUnreadAgain()
+        {
+            var (groupId, members) = await GroupOfAsync(3);
+            var author = members[0];
+            var reader = members[1];
+
+            await CreateExpenseAsync(author, groupId, 90m, members);
+
+            var feed = await ActivityAsync(reader, groupId);
+            await MarkSeenAsync(reader, groupId, feed.Max(e => e.Sequence));
+
+            await CreateExpenseAsync(author, groupId, 60m, members);
+
+            var after = await UnreadAsync(reader);
+
+            after.Should().ContainSingle(u => u.GroupId == groupId)
+                .Which.Unread.Should().Be(1);
+        }
+
+        [Fact]
+        public async Task TheReadCursorNeverMovesBackwards()
+        {
+            var (groupId, members) = await GroupOfAsync(3);
+            var author = members[0];
+            var reader = members[1];
+
+            await CreateExpenseAsync(author, groupId, 90m, members);
+
+            var feed = await ActivityAsync(reader, groupId);
+            var newest = feed.Max(e => e.Sequence);
+
+            await MarkSeenAsync(reader, groupId, newest);
+            await MarkSeenAsync(reader, groupId, 0);
+
+            var after = await UnreadAsync(reader);
+
+            after.Should().NotContain(u => u.GroupId == groupId);
+        }
+
+        [Fact]
+        public async Task MarkingActivitySeenOnAGroupYouAreNotIn_Returns404()
+        {
+            var (groupId, _) = await GroupOfAsync(2);
+            var outsider = await _fixture.RegisterAsync();
+
+            var response = await MarkSeenAsync(outsider, groupId, 1);
+
+            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        }
+
         private static async Task<Guid> CreateGroupAsync(TestUser owner, string currency = "TRY")
         {
             var created = await owner.Client.PostAsJsonAsync(
@@ -588,6 +677,26 @@ namespace Wallet.IntegrationTests.Api
 
             return await sender.Client.SendAsync(message);
         }
+
+        private static async Task<int> UnreadCountAsync(TestUser user, Guid groupId)
+        {
+            var counts = await UnreadAsync(user);
+
+            return counts.SingleOrDefault(c => c.GroupId == groupId)?.Unread ?? 0;
+        }
+
+        private static async Task<List<GroupUnreadCountResponse>> UnreadAsync(TestUser user)
+        {
+            var counts = await user.Client.GetFromJsonAsync<List<GroupUnreadCountResponse>>(
+                "/api/groups/activity/unread");
+
+            return counts!;
+        }
+
+        private static async Task<HttpResponseMessage> MarkSeenAsync(
+            TestUser user, Guid groupId, long sequence) =>
+            await user.Client.PostAsJsonAsync(
+                $"/api/groups/{groupId}/activity/seen", new MarkActivitySeenRequest(sequence));
 
         private static async Task<List<ActivityEntryResponse>> ActivityAsync(
             TestUser user, Guid groupId, long? after = null)

@@ -6,6 +6,8 @@ using Wallet.Api.Contracts.Groups;
 using Wallet.Api.Contracts.Groups.Requests;
 using Wallet.Api.Contracts.Groups.Responses;
 using Wallet.Application.Activity.GetGroupActivity;
+using Wallet.Application.Activity.GetUnreadActivity;
+using Wallet.Application.Activity.MarkActivitySeen;
 using Wallet.Application.Groups.CreateGroup;
 using Wallet.Application.Groups.GetGroupBalance;
 using Wallet.Application.Groups.GetMyGroups;
@@ -67,6 +69,26 @@ namespace Wallet.Api.Controllers
                 cancellationToken);
 
             return Ok(entries.Select(entry => entry.ToResponse()).ToList());
+        }
+
+        [HttpPost("{groupId:guid}/activity/seen")]
+        public async Task<IActionResult> MarkActivitySeen(
+            Guid groupId,
+            MarkActivitySeenRequest request,
+            CancellationToken cancellationToken)
+        {
+            await _sender.Send(new MarkActivitySeenCommand(groupId, request.Sequence), cancellationToken);
+
+            return NoContent();
+        }
+
+        [HttpGet("activity/unread")]
+        public async Task<ActionResult<IReadOnlyList<GroupUnreadCountResponse>>> GetUnread(
+            CancellationToken cancellationToken)
+        {
+            var counts = await _sender.Send(new GetUnreadActivityQuery(), cancellationToken);
+
+            return Ok(counts.Select(count => count.ToResponse()).ToList());
         }
     }
 }
