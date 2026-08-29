@@ -6,6 +6,7 @@ using Wallet.Application.Abstractions;
 using Wallet.Application.Abstractions.Accounts;
 using Wallet.Application.Abstractions.Expenses;
 using Wallet.Application.Abstractions.Groups;
+using Wallet.Application.Abstractions.Users;
 using Wallet.Domain.Accounts;
 using Wallet.Domain.Exceptions;
 using Wallet.Domain.Expenses;
@@ -19,19 +20,22 @@ namespace Wallet.Application.Expenses.CreateExpense
         private readonly IAccountRepository _accounts;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ExpensePostingService _postingService;
+        private readonly ICurrentUser _currentUser;
 
         public CreateExpenseCommandHandler(
             IExpenseRepository expenseRepository,
             IGroupRepository groups,
             IAccountRepository accounts,
             IUnitOfWork unitOfWork,
-            ExpensePostingService postingService)
+            ExpensePostingService postingService,
+            ICurrentUser currentUser)
         {
             _expenses = expenseRepository;
             _groups = groups;
             _accounts = accounts;
             _unitOfWork = unitOfWork;
             _postingService = postingService;
+            _currentUser = currentUser;
         }
 
         public async Task<Guid> Handle(CreateExpenseCommand request, CancellationToken cancellationToken)
@@ -42,6 +46,7 @@ namespace Wallet.Application.Expenses.CreateExpense
                 Guid.NewGuid(),
                 group,
                 request.PayerId,
+                _currentUser.UserId,
                 request.Amount,
                 request.Description,
                 request.OccurredAt,

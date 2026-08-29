@@ -1,16 +1,19 @@
+using Wallet.Domain.Activity;
 using Wallet.Domain.Common;
 using Wallet.Domain.Exceptions;
 using Wallet.Domain.Groups;
 
 namespace Wallet.Domain.Expenses
 {
-    public class Expense
+    public class Expense : AggregateRoot
     {
         private readonly List<ExpenseSplit> _splits = new();
 
         public Guid Id { get; private set; }
         public Guid GroupId { get; private set; }
         public Guid PayerId { get; private set; }
+        public Guid CreatedBy { get; private set; }
+        public DateTimeOffset CreatedAt { get; private set; }
         public Money Total { get; private set; }
         public string Description { get; private set; }
         public DateTimeOffset OccurredAt { get; private set; }
@@ -33,6 +36,7 @@ namespace Wallet.Domain.Expenses
             Guid id,
             Group group,
             Guid payerId,
+            Guid createdBy,
             decimal amount,
             string description,
             DateTimeOffset occurredAt,
@@ -52,6 +56,12 @@ namespace Wallet.Domain.Expenses
             if (!group.IsActiveMember(payerId))
                 throw new InvalidExpenseException("The payer must be an active group member.");
 
+            if (createdBy == Guid.Empty)
+                throw new ArgumentException("CreatedBy cannot be empty.", nameof(createdBy));
+
+            if (!group.IsActiveMember(createdBy))
+                throw new InvalidExpenseException("The creator must be an active group member.");
+
             if (!participants.Contains(payerId))
                 throw new InvalidExpenseException("The payer must be one of the participants.");
 
@@ -69,6 +79,8 @@ namespace Wallet.Domain.Expenses
                 Id = id,
                 GroupId = group.Id,
                 PayerId = payerId,
+                CreatedBy = createdBy,
+                CreatedAt = DateTimeOffset.UtcNow,
                 Total = new Money(amount, group.Currency),
                 Description = description.Trim(),
                 OccurredAt = occurredAt.ToUniversalTime(),
@@ -80,6 +92,17 @@ namespace Wallet.Domain.Expenses
                 expense._splits.Add(new ExpenseSplit(
                     Guid.NewGuid(), id, participantId, new Money(share, group.Currency)));
             }
+
+            expense.Raise(new ExpenseCreated(
+                expense.Id,
+                group.Id,
+                createdBy,
+                payerId,
+                amount,
+                group.Currency,
+                expense.Description,
+                replacesExpenseId is not null,
+                expense.CreatedAt));
 
             return expense;
         }
@@ -95,6 +118,10 @@ namespace Wallet.Domain.Expenses
             ReversedAt = at.ToUniversalTime();
             ReversedBy = reversedBy;
             ReversalReason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
+
+            Raise(new ExpenseReversed(
+                Id, GroupId, reversedBy, Total.Amount, Total.Currency,
+                Description, ReversalReason, ReversedAt.Value));
         }
     }
 }

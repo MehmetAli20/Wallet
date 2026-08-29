@@ -4,8 +4,10 @@ using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Wallet.Application.Abstractions.Users;
 using Wallet.Domain.Accounts;
+using Wallet.Domain.Activity;
 using Wallet.Domain.Expenses;
 using Wallet.Domain.Groups;
+using Wallet.Domain.Settlements;
 using Wallet.Domain.Transfers;
 using Wallet.Domain.Users;
 
@@ -26,6 +28,8 @@ namespace Wallet.Infrastructure.Persistence
         public DbSet<ScheduledTransfer> ScheduledTransfers => Set<ScheduledTransfer>();
         public DbSet<Group> Groups => Set<Group>();
         public DbSet<Expense> Expenses => Set<Expense>();
+        public DbSet<Settlement> Settlements => Set<Settlement>();
+        public DbSet<ActivityEntry> ActivityEntries => Set<ActivityEntry>();
         protected override void OnModelCreating(ModelBuilder modelbuilder)
         {
             modelbuilder.ApplyConfigurationsFromAssembly(typeof(WalletDbContext).Assembly);
@@ -41,6 +45,16 @@ namespace Wallet.Infrastructure.Persistence
                     || e.OwnerId == _currentUser.UserId
                     || Set<Group>().Any(g => g.Id == e.GroupId
                         && g.Members.Any(m => m.UserId == _currentUser.UserId && m.Status == GroupMemberStatus.Active)));
+            modelbuilder.Entity<Settlement>()
+                .HasQueryFilter(s => _currentUser.IsSystem
+                    || Set<Group>().Any(g => g.Id == s.GroupId
+                        && g.Members.Any(m => m.UserId == _currentUser.UserId
+                            && m.Status == GroupMemberStatus.Active)));
+            modelbuilder.Entity<ActivityEntry>()
+                .HasQueryFilter(a => _currentUser.IsSystem
+                    || Set<Group>().Any(g => g.Id == a.GroupId
+                        && g.Members.Any(m => m.UserId == _currentUser.UserId
+                            && m.Status == GroupMemberStatus.Active)));
             modelbuilder.Entity<Group>()
                 .HasQueryFilter(g => _currentUser.IsSystem
                     || g.Members.Any(m => m.UserId == _currentUser.UserId && m.Status == GroupMemberStatus.Active));

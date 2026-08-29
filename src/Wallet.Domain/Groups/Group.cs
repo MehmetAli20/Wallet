@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Wallet.Domain.Activity;
 using Wallet.Domain.Common;
 using Wallet.Domain.Exceptions;
 
 namespace Wallet.Domain.Groups
 {
-    public class Group
+    public class Group : AggregateRoot
     {
         private readonly List<GroupMember> _members = new();
         
@@ -94,6 +95,9 @@ namespace Wallet.Domain.Groups
                 Guid.NewGuid(), Id, userId, GroupMemberRole.Member, GroupMemberStatus.Invited, invitedBy);
 
             _members.Add(member);
+
+            Raise(new MemberInvited(Id, userId, invitedBy, DateTimeOffset.UtcNow));
+
             return member;
         }
 
@@ -106,6 +110,8 @@ namespace Wallet.Domain.Groups
                 throw new InvalidGroupOperationException("Only a pending invitation can be declined.");
 
             _members.Remove(member);
+
+            Raise(new InvitationDeclined(Id, userId, DateTimeOffset.UtcNow));
         }
 
         public void Accept(Guid userId)
@@ -114,9 +120,11 @@ namespace Wallet.Domain.Groups
                 ?? throw new InvalidGroupOperationException("User was not invited to this group.");
 
             member.Accept();
+
+            Raise(new MemberJoined(Id, userId, DateTimeOffset.UtcNow));
         }
 
-        public void Remove(Guid userId)
+        public void Remove(Guid userId, Guid removedBy)
         {
             if (Kind == GroupKind.Pair)
                 throw new InvalidGroupOperationException("Members of a pair cannot be removed.");
@@ -127,7 +135,12 @@ namespace Wallet.Domain.Groups
             if (member.Role == GroupMemberRole.Admin && _members.Count(m => m.Role == GroupMemberRole.Admin) == 1)
                 throw new InvalidGroupOperationException("The last admin cannot be removed.");
 
+            if (removedBy == Guid.Empty)
+                throw new ArgumentException("RemovedBy cannot be empty.", nameof(removedBy));
+
             _members.Remove(member);
+
+            Raise(new MemberRemoved(Id, userId, removedBy, DateTimeOffset.UtcNow));
         }
 
         public bool IsActiveMember(Guid userId) =>

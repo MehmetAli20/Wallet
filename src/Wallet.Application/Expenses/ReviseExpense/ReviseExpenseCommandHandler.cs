@@ -64,6 +64,7 @@ namespace Wallet.Application.Expenses.ReviseExpense
                 Guid.NewGuid(),
                 group,
                 original.PayerId,
+                _currentUser.UserId,
                 request.Amount,
                 request.Description,
                 request.OccurredAt,

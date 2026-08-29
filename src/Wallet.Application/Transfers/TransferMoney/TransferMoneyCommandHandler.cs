@@ -2,10 +2,12 @@ using MediatR;
 using Wallet.Application.Abstractions;
 using Wallet.Application.Abstractions.Accounts;
 using Wallet.Application.Abstractions.Groups;
+using Wallet.Application.Abstractions.Settlements;
 using Wallet.Application.Abstractions.Users;
 using Wallet.Domain.Accounts;
 using Wallet.Domain.Common;
 using Wallet.Domain.Exceptions;
+using Wallet.Domain.Settlements;
 using Wallet.Domain.Transfers;
 
 namespace Wallet.Application.Transfers.TransferMoney
@@ -16,6 +18,7 @@ namespace Wallet.Application.Transfers.TransferMoney
         private readonly IGroupRepository _groups;
         private readonly IUnitOfWork _unitOfWork;
         private readonly TransferService _transferService;
+        private readonly ISettlementRepository _settlements;
         private readonly ICurrentUser _currentUser;
 
         public TransferMoneyCommandHandler(
@@ -23,12 +26,14 @@ namespace Wallet.Application.Transfers.TransferMoney
             IGroupRepository groups,
             IUnitOfWork unitOfWork,
             TransferService transferService,
+            ISettlementRepository settlements,
             ICurrentUser currentUser)
         {
             _accounts = accounts;
             _groups = groups;
             _unitOfWork = unitOfWork;
             _transferService = transferService;
+            _settlements = settlements;
             _currentUser = currentUser;
         }
 
@@ -47,6 +52,12 @@ namespace Wallet.Application.Transfers.TransferMoney
             var payee = await ResolveAccountAsync(request.RecipientUserId, group.Currency, cancellationToken);
 
             _transferService.Settle(payer, payee, new Money(request.Amount, group.Currency), group.Id);
+
+            var settlement = Settlement.Record(
+                Guid.NewGuid(), group, _currentUser.UserId, request.RecipientUserId,
+                request.Amount, DateTimeOffset.UtcNow);
+
+            await _settlements.AddAsync(settlement, cancellationToken);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }

@@ -7,7 +7,9 @@ using System.Text;
 using Wallet.Application.Abstractions;
 using Wallet.Application.Abstractions.Accounts;
 using Wallet.Application.Abstractions.Expenses;
+using Wallet.Application.Abstractions.Activity;
 using Wallet.Application.Abstractions.Groups;
+using Wallet.Application.Abstractions.Settlements;
 using Wallet.Application.Abstractions.Transfers;
 using Wallet.Application.Abstractions.Users;
 using Wallet.Infrastructure.Authentication;
@@ -35,6 +37,8 @@ namespace Wallet.Infrastructure
             services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
             services.AddScoped<IAccountRepository, AccountRepository>();
             services.AddScoped<IScheduledTransferRepository, ScheduledTransferRepository>();
+            services.AddScoped<ISettlementRepository, SettlementRepository>();
+            services.AddScoped<IActivityRepository, ActivityRepository>();
             services.AddScoped<IExpenseRepository, ExpenseRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();

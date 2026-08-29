@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
 using Wallet.Api.Contracts.Accounts.Responses;
+using Wallet.Api.Contracts.Activity.Responses;
 using Wallet.Api.Contracts.Expenses.Requests;
 using Wallet.Api.Contracts.Groups.Requests;
 using Wallet.Api.Contracts.Groups.Responses;
@@ -408,7 +409,6 @@ namespace Wallet.IntegrationTests.Api
 
             var expenseId = await CreateExpenseAsync(payer, groupId, 90m, members);
 
-            // Dropping yourself from the participants would erase your own debt onto the others.
             var response = await ReviseAsync(freeloader, expenseId, new ReviseExpenseRequest(
                 90m, "Market", DateTimeOffset.UtcNow, Participants(payer, members[2])));
 
@@ -431,6 +431,99 @@ namespace Wallet.IntegrationTests.Api
 
             (await ReviseAsync(payer, expenseId, request)).StatusCode.Should().Be(HttpStatusCode.Created);
             (await ReviseAsync(payer, expenseId, request)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        [Fact]
+        public async Task TheActivityFeed_NamesWhoEnteredTheExpense_NotWhoPaid()
+        {
+            var (groupId, members) = await GroupOfAsync(3);
+            var payer = members[0];
+            var author = members[1];
+
+            var created = await PostExpenseAsync(author, new CreateExpenseRequest(
+                groupId, payer.Id, 90m, "Market", DateTimeOffset.UtcNow, Participants(members)));
+
+            created.StatusCode.Should().Be(HttpStatusCode.Created);
+            var expenseId = await created.Content.ReadFromJsonAsync<Guid>();
+
+            var feed = await ActivityAsync(payer, groupId);
+
+            var entry = feed.Should().ContainSingle(e => e.Type == "ExpenseCreated").Subject;
+
+            entry.ActorId.Should().Be(author.Id);
+            entry.ActorId.Should().NotBe(payer.Id);
+            entry.SubjectId.Should().Be(expenseId);
+            entry.Amount.Should().Be(90m);
+            entry.Description.Should().Be("Market");
+        }
+
+        [Fact]
+        public async Task ReversalAndSettlement_BothLandInTheFeed()
+        {
+            var (groupId, members) = await GroupOfAsync(3);
+            var creditor = members[0];
+            var debtor = members[1];
+
+            var expenseId = await CreateExpenseAsync(creditor, groupId, 90m, members);
+
+            await SettleAsync(debtor, groupId, creditor, 30m);
+            await ReverseAsync(debtor, expenseId, "never happened");
+
+            var feed = await ActivityAsync(creditor, groupId);
+
+            feed.Should().ContainSingle(e => e.Type == "SettlementRecorded")
+                .Which.ActorId.Should().Be(debtor.Id);
+
+            var reversal = feed.Should().ContainSingle(e => e.Type == "ExpenseReversed").Subject;
+            reversal.ActorId.Should().Be(debtor.Id);
+            reversal.SubjectId.Should().Be(expenseId);
+            reversal.Description.Should().Be("never happened");
+        }
+
+        [Fact]
+        public async Task TheFeedIsOrdered_AndTheCursorSkipsWhatYouHaveSeen()
+        {
+            var (groupId, members) = await GroupOfAsync(3);
+            var payer = members[0];
+
+            await CreateExpenseAsync(payer, groupId, 90m, members);
+
+            var first = await ActivityAsync(payer, groupId);
+            var newest = first.Max(e => e.Sequence);
+
+            first.Select(e => e.Sequence).Should().BeInDescendingOrder();
+
+            await CreateExpenseAsync(payer, groupId, 60m, members);
+
+            var since = await ActivityAsync(payer, groupId, after: newest);
+
+            since.Should().ContainSingle();
+            since[0].Amount.Should().Be(60m);
+        }
+
+        [Fact]
+        public async Task TheActivityFeedOfAGroupYouAreNotIn_Returns404()
+        {
+            var (groupId, _) = await GroupOfAsync(2);
+            var outsider = await _fixture.RegisterAsync();
+
+            var response = await outsider.Client.GetAsync($"/api/groups/{groupId}/activity");
+
+            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        }
+
+        [Fact]
+        public async Task InvitingAndJoining_AreBothVisibleInTheFeed()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+
+            var feed = await ActivityAsync(members[0], groupId);
+
+            feed.Should().ContainSingle(e => e.Type == "MemberInvited")
+                .Which.SubjectId.Should().Be(members[1].Id);
+
+            feed.Should().ContainSingle(e => e.Type == "MemberJoined")
+                .Which.ActorId.Should().Be(members[1].Id);
         }
 
         private static async Task<Guid> CreateGroupAsync(TestUser owner, string currency = "TRY")
@@ -494,6 +587,19 @@ namespace Wallet.IntegrationTests.Api
             message.Headers.Add("Idempotency-Key", idempotencyKey ?? Guid.NewGuid().ToString());
 
             return await sender.Client.SendAsync(message);
+        }
+
+        private static async Task<List<ActivityEntryResponse>> ActivityAsync(
+            TestUser user, Guid groupId, long? after = null)
+        {
+            var url = $"/api/groups/{groupId}/activity";
+
+            if (after is not null)
+                url += $"?after={after}";
+
+            var feed = await user.Client.GetFromJsonAsync<List<ActivityEntryResponse>>(url);
+
+            return feed!;
         }
 
         private static async Task<Guid> CreateExpenseAsync(

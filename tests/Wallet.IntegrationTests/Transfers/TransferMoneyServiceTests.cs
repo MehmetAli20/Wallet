@@ -10,6 +10,7 @@ using Wallet.Domain.Groups;
 using Wallet.Domain.Transfers;
 using Wallet.Domain.Users;
 using Wallet.Infrastructure.Persistence;
+using Wallet.Infrastructure.Persistence.Repositories;
 using AccountRepo = Wallet.Infrastructure.Persistence.Repositories.AccountRepository.AccountRepository;
 using GroupRepo = Wallet.Infrastructure.Persistence.Repositories.GroupRepository.GroupRepository;
 using UserRepo = Wallet.Infrastructure.Persistence.Repositories.UserRepository.UserRepository;
@@ -30,6 +31,7 @@ namespace Wallet.IntegrationTests.Transfers
                 new GroupRepo(context),
                 new UnitOfWork(context),
                 new TransferService(),
+                new SettlementRepository(context),
                 TestCurrentUser.For(senderId));
 
         private async Task SeedUserAsync(Guid userId)

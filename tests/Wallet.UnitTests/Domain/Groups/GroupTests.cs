@@ -193,7 +193,7 @@ namespace Wallet.UnitTests.Domain.Groups
             var invited = Guid.NewGuid();
             group.Invite(invited, group.Members[0].UserId);
 
-            group.Remove(invited);
+            group.Remove(invited, group.Members[0].UserId);
 
             group.Members.Should().ContainSingle();
             group.Members.Should().NotContain(m => m.UserId == invited);
@@ -205,7 +205,7 @@ namespace Wallet.UnitTests.Domain.Groups
             var userA = Guid.NewGuid();
             var pair = Group.CreatePair(Guid.NewGuid(), "USD", userA, Guid.NewGuid());
 
-            var act = () => pair.Remove(userA);
+            var act = () => pair.Remove(userA, userA);
 
             act.Should().Throw<InvalidGroupOperationException>();
         }
@@ -215,7 +215,7 @@ namespace Wallet.UnitTests.Domain.Groups
         {
             var group = NewNamed();
 
-            var act = () => group.Remove(Guid.NewGuid());
+            var act = () => group.Remove(Guid.NewGuid(), group.Members[0].UserId);
 
             act.Should().Throw<InvalidGroupOperationException>();
         }
@@ -225,7 +225,7 @@ namespace Wallet.UnitTests.Domain.Groups
         {
             var pair = Group.CreatePair(Guid.NewGuid(), "USD", Guid.NewGuid(), Guid.NewGuid());
 
-            var act = () => pair.Remove(Guid.NewGuid());
+            var act = () => pair.Remove(Guid.NewGuid(), Guid.NewGuid());
 
             act.Should().Throw<InvalidGroupOperationException>()
                 .WithMessage("*pair*");
@@ -240,7 +240,7 @@ namespace Wallet.UnitTests.Domain.Groups
             group.Invite(invited, group.Members[0].UserId);
             group.Accept(invited);
 
-            var act = () => group.Remove(creator);
+            var act = () => group.Remove(creator, creator);
 
             act.Should().Throw<InvalidGroupOperationException>();
         }

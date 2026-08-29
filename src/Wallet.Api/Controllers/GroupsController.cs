@@ -1,9 +1,11 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Wallet.Api.Contracts.Activity.Responses;
 using Wallet.Api.Contracts.Groups;
 using Wallet.Api.Contracts.Groups.Requests;
 using Wallet.Api.Contracts.Groups.Responses;
+using Wallet.Application.Activity.GetGroupActivity;
 using Wallet.Application.Groups.CreateGroup;
 using Wallet.Application.Groups.GetGroupBalance;
 using Wallet.Application.Groups.GetMyGroups;
@@ -51,6 +53,20 @@ namespace Wallet.Api.Controllers
         {
             var report = await _sender.Send(new GetGroupBalanceQuery(groupId, simplify), cancellationToken);
             return Ok(report.ToResponse());
+        }
+
+        [HttpGet("{groupId:guid}/activity")]
+        public async Task<ActionResult<IReadOnlyList<ActivityEntryResponse>>> GetActivity(
+            Guid groupId,
+            [FromQuery] long? after,
+            [FromQuery] int limit,
+            CancellationToken cancellationToken)
+        {
+            var entries = await _sender.Send(
+                new GetGroupActivityQuery(groupId, after, limit <= 0 ? 50 : Math.Min(limit, 200)),
+                cancellationToken);
+
+            return Ok(entries.Select(entry => entry.ToResponse()).ToList());
         }
     }
 }

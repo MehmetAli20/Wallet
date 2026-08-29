@@ -39,7 +39,7 @@ namespace Wallet.UnitTests.Domain.Expenses
             var (group, members, accounts) = NewGroup(5);
             var payer = members[0];
 
-            var expense = Expense.Create(Guid.NewGuid(), group, payer, 250m, "Market",
+            var expense = Expense.Create(Guid.NewGuid(), group, payer, payer, 250m, "Market",
                 DateTimeOffset.UtcNow, members);
 
             _service.Post(expense, accounts);
@@ -59,9 +59,9 @@ namespace Wallet.UnitTests.Domain.Expenses
             var marketPayer = members[0];
             var butcherPayer = members[1];
 
-            var market = Expense.Create(Guid.NewGuid(), group, marketPayer, 120m, "Market",
+            var market = Expense.Create(Guid.NewGuid(), group, marketPayer, marketPayer, 120m, "Market",
                 DateTimeOffset.UtcNow, members);
-            var butcher = Expense.Create(Guid.NewGuid(), group, butcherPayer, 90m, "Kasap",
+            var butcher = Expense.Create(Guid.NewGuid(), group, butcherPayer, butcherPayer, 90m, "Kasap",
                 DateTimeOffset.UtcNow, members);
 
             _service.Post(market, accounts);
@@ -84,7 +84,7 @@ namespace Wallet.UnitTests.Domain.Expenses
             var generous = members[1];
             var covered = members[4];
 
-            var expense = Expense.Create(Guid.NewGuid(), group, payer, 200m, "Market",
+            var expense = Expense.Create(Guid.NewGuid(), group, payer, payer, 200m, "Market",
                 DateTimeOffset.UtcNow, members,
                 new Dictionary<Guid, decimal> { [generous] = 80m, [covered] = 0m });
 
@@ -106,7 +106,7 @@ namespace Wallet.UnitTests.Domain.Expenses
             var (group, members, accounts) = NewGroup(3);
             var payer = members[0];
 
-            var expense = Expense.Create(Guid.NewGuid(), group, payer, 100m, "Market",
+            var expense = Expense.Create(Guid.NewGuid(), group, payer, payer, 100m, "Market",
                 DateTimeOffset.UtcNow, members);
 
             _service.Post(expense, accounts);
@@ -128,7 +128,7 @@ namespace Wallet.UnitTests.Domain.Expenses
             var (group, members, accounts) = NewGroup(4);
             var payer = members[0];
 
-            var expense = Expense.Create(Guid.NewGuid(), group, payer, 100m, "Market",
+            var expense = Expense.Create(Guid.NewGuid(), group, payer, payer, 100m, "Market",
                 DateTimeOffset.UtcNow, members);
 
             _service.Post(expense, accounts);
@@ -151,7 +151,7 @@ namespace Wallet.UnitTests.Domain.Expenses
             var payer = members[0];
             var debtor = members[1];
 
-            var expense = Expense.Create(Guid.NewGuid(), group, payer, 90m, "Market",
+            var expense = Expense.Create(Guid.NewGuid(), group, payer, payer, 90m, "Market",
                 DateTimeOffset.UtcNow, members);
 
             _service.Post(expense, accounts);
@@ -172,7 +172,7 @@ namespace Wallet.UnitTests.Domain.Expenses
             var payer = members[0];
             var absent = members[4];
 
-            var expense = Expense.Create(Guid.NewGuid(), group, payer, 100m, "Market",
+            var expense = Expense.Create(Guid.NewGuid(), group, payer, payer, 100m, "Market",
                 DateTimeOffset.UtcNow, members,
                 new Dictionary<Guid, decimal> { [absent] = 0m });
 
@@ -192,7 +192,7 @@ namespace Wallet.UnitTests.Domain.Expenses
         {
             var (group, members, accounts) = NewGroup(3);
 
-            var expense = Expense.Create(Guid.NewGuid(), group, members[0], 90m, "Market",
+            var expense = Expense.Create(Guid.NewGuid(), group, members[0], members[0], 90m, "Market",
                 DateTimeOffset.UtcNow, members);
 
             _service.Post(expense, accounts);
@@ -206,7 +206,7 @@ namespace Wallet.UnitTests.Domain.Expenses
         {
             var (group, members, accounts) = NewGroup(3);
 
-            var expense = Expense.Create(Guid.NewGuid(), group, members[0], 90m, "Market",
+            var expense = Expense.Create(Guid.NewGuid(), group, members[0], members[0], 90m, "Market",
                 DateTimeOffset.UtcNow, members);
 
             accounts.Remove(members[2]);
@@ -221,7 +221,7 @@ namespace Wallet.UnitTests.Domain.Expenses
         {
             var (group, members, accounts) = NewGroup(3);
 
-            var expense = Expense.Create(Guid.NewGuid(), group, members[0], 90m, "Market",
+            var expense = Expense.Create(Guid.NewGuid(), group, members[0], members[0], 90m, "Market",
                 DateTimeOffset.UtcNow, members);
 
             accounts.Remove(members[0]);
@@ -236,7 +236,7 @@ namespace Wallet.UnitTests.Domain.Expenses
         {
             var (group, members, accounts) = NewGroup(3);
 
-            var expense = Expense.Create(Guid.NewGuid(), group, members[0], 90m, "Market",
+            var expense = Expense.Create(Guid.NewGuid(), group, members[0], members[0], 90m, "Market",
                 DateTimeOffset.UtcNow, members);
 
             accounts[members[2]] = new Account(Guid.NewGuid(), members[2], "USD");
@@ -251,7 +251,7 @@ namespace Wallet.UnitTests.Domain.Expenses
         {
             var (group, members, accounts) = NewGroup(3);
 
-            var expense = Expense.Create(Guid.NewGuid(), group, members[0], 90m, "Market",
+            var expense = Expense.Create(Guid.NewGuid(), group, members[0], members[0], 90m, "Market",
                 DateTimeOffset.UtcNow, members);
 
             accounts.Remove(members[2]);
@@ -267,7 +267,7 @@ namespace Wallet.UnitTests.Domain.Expenses
         {
             var (group, members, accounts) = NewGroup(5);
 
-            var expense = Expense.Create(Guid.NewGuid(), group, members[0], 250m, "Market",
+            var expense = Expense.Create(Guid.NewGuid(), group, members[0], members[0], 250m, "Market",
                 DateTimeOffset.UtcNow, members);
 
             _service.Post(expense, accounts);
@@ -281,7 +281,7 @@ namespace Wallet.UnitTests.Domain.Expenses
         {
             var (group, members, accounts) = NewGroup(3);
 
-            var expense = Expense.Create(Guid.NewGuid(), group, members[0], 90m, "Market",
+            var expense = Expense.Create(Guid.NewGuid(), group, members[0], members[0], 90m, "Market",
                 DateTimeOffset.UtcNow, members);
 
             _service.Post(expense, accounts);
@@ -299,7 +299,7 @@ namespace Wallet.UnitTests.Domain.Expenses
             var payer = members[0];
             var other = members[1];
 
-            var expense = Expense.Create(Guid.NewGuid(), group, payer, 100m, "Market",
+            var expense = Expense.Create(Guid.NewGuid(), group, payer, payer, 100m, "Market",
                 DateTimeOffset.UtcNow, members);
 
             _service.Post(expense, accounts);
@@ -317,7 +317,7 @@ namespace Wallet.UnitTests.Domain.Expenses
             var (group, members, accounts) = NewGroup(3);
             var payer = members[0];
 
-            var expense = Expense.Create(Guid.NewGuid(), group, payer, 90m, "Market",
+            var expense = Expense.Create(Guid.NewGuid(), group, payer, payer, 90m, "Market",
                 DateTimeOffset.UtcNow, members);
 
             _service.Post(expense, accounts);
@@ -334,7 +334,7 @@ namespace Wallet.UnitTests.Domain.Expenses
             var payer = members[0];
             var excused = members[1];
 
-            var expense = Expense.Create(Guid.NewGuid(), group, payer, 90m, "Market",
+            var expense = Expense.Create(Guid.NewGuid(), group, payer, payer, 90m, "Market",
                 DateTimeOffset.UtcNow, members,
                 new Dictionary<Guid, decimal> { [excused] = 0m });
 

@@ -29,7 +29,7 @@ namespace Wallet.UnitTests.Domain.Expenses
         {
             var (group, members) = NewGroup(5);
 
-            var expense = Expense.Create(Guid.NewGuid(), group, members[0], 250m, "Market",
+            var expense = Expense.Create(Guid.NewGuid(), group, members[0], members[0], 250m, "Market",
                 DateTimeOffset.UtcNow, members);
 
             expense.Splits.Should().HaveCount(5);
@@ -43,7 +43,7 @@ namespace Wallet.UnitTests.Domain.Expenses
             var (group, members) = NewGroup(5);
             var generous = members[1];
 
-            var expense = Expense.Create(Guid.NewGuid(), group, members[0], 100m, "Market",
+            var expense = Expense.Create(Guid.NewGuid(), group, members[0], members[0], 100m, "Market",
                 DateTimeOffset.UtcNow, members,
                 new Dictionary<Guid, decimal> { [generous] = 60m });
 
@@ -59,7 +59,7 @@ namespace Wallet.UnitTests.Domain.Expenses
             var (group, members) = NewGroup(5);
             var payer = members[0];
 
-            var expense = Expense.Create(Guid.NewGuid(), group, payer, 100m, "Market",
+            var expense = Expense.Create(Guid.NewGuid(), group, payer, payer, 100m, "Market",
                 DateTimeOffset.UtcNow, members,
                 new Dictionary<Guid, decimal> { [payer] = 0m });
 
@@ -74,7 +74,7 @@ namespace Wallet.UnitTests.Domain.Expenses
         {
             var (group, members) = NewGroup(6);
 
-            var expense = Expense.Create(Guid.NewGuid(), group, members[0], 100m, "Market",
+            var expense = Expense.Create(Guid.NewGuid(), group, members[0], members[0], 100m, "Market",
                 DateTimeOffset.UtcNow, members);
 
             expense.Splits.Sum(s => s.Share.Amount).Should().Be(100m);
@@ -87,8 +87,8 @@ namespace Wallet.UnitTests.Domain.Expenses
         {
             var (group, members) = NewGroup(3);
 
-            var first = Expense.Create(Guid.NewGuid(), group, members[0], 10m, "A", DateTimeOffset.UtcNow, members);
-            var second = Expense.Create(Guid.NewGuid(), group, members[0], 10m, "B", DateTimeOffset.UtcNow, members);
+            var first = Expense.Create(Guid.NewGuid(), group, members[0], members[0], 10m, "A", DateTimeOffset.UtcNow, members);
+            var second = Expense.Create(Guid.NewGuid(), group, members[0], members[0], 10m, "B", DateTimeOffset.UtcNow, members);
 
             foreach (var participant in members)
             {
@@ -102,7 +102,7 @@ namespace Wallet.UnitTests.Domain.Expenses
         {
             var (group, members) = NewGroup(3);
 
-            var act = () => Expense.Create(Guid.NewGuid(), group, members[0], 100m, "Market",
+            var act = () => Expense.Create(Guid.NewGuid(), group, members[0], members[0], 100m, "Market",
                 DateTimeOffset.UtcNow, members,
                 new Dictionary<Guid, decimal> { [members[1]] = 120m });
 
@@ -114,7 +114,7 @@ namespace Wallet.UnitTests.Domain.Expenses
         {
             var (group, members) = NewGroup(2);
 
-            var act = () => Expense.Create(Guid.NewGuid(), group, members[0], 100m, "Market",
+            var act = () => Expense.Create(Guid.NewGuid(), group, members[0], members[0], 100m, "Market",
                 DateTimeOffset.UtcNow, members,
                 new Dictionary<Guid, decimal> { [members[0]] = 40m, [members[1]] = 30m });
 
@@ -126,7 +126,7 @@ namespace Wallet.UnitTests.Domain.Expenses
         {
             var (group, members) = NewGroup(3);
 
-            var act = () => Expense.Create(Guid.NewGuid(), group, members[0], 100m, "Market",
+            var act = () => Expense.Create(Guid.NewGuid(), group, members[0], members[0], 100m, "Market",
                 DateTimeOffset.UtcNow, new List<Guid> { members[1], members[2] });
 
             act.Should().Throw<InvalidExpenseException>();
@@ -138,7 +138,7 @@ namespace Wallet.UnitTests.Domain.Expenses
             var (group, members) = NewGroup(2);
             var outsider = Guid.NewGuid();
 
-            var act = () => Expense.Create(Guid.NewGuid(), group, members[0], 100m, "Market",
+            var act = () => Expense.Create(Guid.NewGuid(), group, members[0], members[0], 100m, "Market",
                 DateTimeOffset.UtcNow, new List<Guid> { members[0], outsider });
 
             act.Should().Throw<InvalidExpenseException>();
@@ -152,7 +152,7 @@ namespace Wallet.UnitTests.Domain.Expenses
             var invited = Guid.NewGuid();
             group.Invite(invited, creator);
 
-            var act = () => Expense.Create(Guid.NewGuid(), group, creator, 100m, "Market",
+            var act = () => Expense.Create(Guid.NewGuid(), group, creator, creator, 100m, "Market",
                 DateTimeOffset.UtcNow, new List<Guid> { creator, invited });
 
             act.Should().Throw<InvalidExpenseException>();
@@ -163,7 +163,7 @@ namespace Wallet.UnitTests.Domain.Expenses
         {
             var (group, members) = NewGroup(2);
 
-            var expense = Expense.Create(Guid.NewGuid(), group, members[0], 50m, "Market",
+            var expense = Expense.Create(Guid.NewGuid(), group, members[0], members[0], 50m, "Market",
                 DateTimeOffset.UtcNow, members);
 
             expense.Total.Currency.Should().Be("TRY");
@@ -177,7 +177,7 @@ namespace Wallet.UnitTests.Domain.Expenses
             var actor = members[1];
             var at = DateTimeOffset.UtcNow;
 
-            var expense = Expense.Create(Guid.NewGuid(), group, members[0], 90m, "Market",
+            var expense = Expense.Create(Guid.NewGuid(), group, members[0], members[0], 90m, "Market",
                 DateTimeOffset.UtcNow, members);
 
             expense.IsReversed.Should().BeFalse();
@@ -195,7 +195,7 @@ namespace Wallet.UnitTests.Domain.Expenses
         {
             var (group, members) = NewGroup(3);
 
-            var expense = Expense.Create(Guid.NewGuid(), group, members[0], 90m, "Market",
+            var expense = Expense.Create(Guid.NewGuid(), group, members[0], members[0], 90m, "Market",
                 DateTimeOffset.UtcNow, members);
 
             expense.Reverse(members[0], DateTimeOffset.UtcNow);
@@ -210,7 +210,7 @@ namespace Wallet.UnitTests.Domain.Expenses
         {
             var (group, members) = NewGroup(3);
 
-            var expense = Expense.Create(Guid.NewGuid(), group, members[0], 90m, "Market",
+            var expense = Expense.Create(Guid.NewGuid(), group, members[0], members[0], 90m, "Market",
                 DateTimeOffset.UtcNow, members);
 
             var act = () => expense.Reverse(Guid.Empty, DateTimeOffset.UtcNow);
@@ -226,7 +226,7 @@ namespace Wallet.UnitTests.Domain.Expenses
         {
             var (group, members) = NewGroup(3);
 
-            var expense = Expense.Create(Guid.NewGuid(), group, members[0], 90m, "Market",
+            var expense = Expense.Create(Guid.NewGuid(), group, members[0], members[0], 90m, "Market",
                 DateTimeOffset.UtcNow, members);
 
             expense.Reverse(members[0], DateTimeOffset.UtcNow, reason);
@@ -239,14 +239,52 @@ namespace Wallet.UnitTests.Domain.Expenses
         {
             var (group, members) = NewGroup(3);
 
-            var original = Expense.Create(Guid.NewGuid(), group, members[0], 90m, "Market",
+            var original = Expense.Create(Guid.NewGuid(), group, members[0], members[0], 90m, "Market",
                 DateTimeOffset.UtcNow, members);
 
-            var revision = Expense.Create(Guid.NewGuid(), group, members[0], 60m, "Market",
+            var revision = Expense.Create(Guid.NewGuid(), group, members[0], members[0], 60m, "Market",
                 DateTimeOffset.UtcNow, members, null, original.Id);
 
             revision.ReplacesExpenseId.Should().Be(original.Id);
             original.ReplacesExpenseId.Should().BeNull();
+        }
+
+        [Fact]
+        public void Create_RecordsWhoEnteredIt_NotJustWhoPaid()
+        {
+            var (group, members) = NewGroup(3);
+            var payer = members[0];
+            var author = members[1];
+
+            var expense = Expense.Create(Guid.NewGuid(), group, payer, author, 90m, "Market",
+                DateTimeOffset.UtcNow, members);
+
+            expense.PayerId.Should().Be(payer);
+            expense.CreatedBy.Should().Be(author);
+            expense.CreatedAt.Should().BeCloseTo(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+        }
+
+        [Fact]
+        public void ACreatorWhoIsNotAnActiveMember_Throws()
+        {
+            var (group, members) = NewGroup(3);
+            var outsider = Guid.NewGuid();
+
+            var act = () => Expense.Create(Guid.NewGuid(), group, members[0], outsider, 90m, "Market",
+                DateTimeOffset.UtcNow, members);
+
+            act.Should().Throw<InvalidExpenseException>();
+        }
+
+        [Fact]
+        public void Create_WithAnEmptyCreator_Throws()
+        {
+            var (group, members) = NewGroup(3);
+
+            var act = () => Expense.Create(Guid.NewGuid(), group, members[0], Guid.Empty, 90m, "Market",
+                DateTimeOffset.UtcNow, members);
+
+            act.Should().Throw<ArgumentException>();
         }
     }
 }
