@@ -18,6 +18,7 @@ builder.Services.AddHangfire(config => config
 
 builder.Services.AddHangfireServer();
 builder.Services.AddScoped<ReconciliationJob>();
+builder.Services.AddScoped<RecurringExpensesJob>();
 builder.Services.AddSingleton<ICurrentUser, SystemCurrentUser>();
 
 var app = builder.Build();
@@ -31,5 +32,10 @@ RecurringJob.AddOrUpdate<ReconciliationJob>(
     "reconciliation-job",
     job => job.RunAsync(),
     Cron.Minutely);
+
+RecurringJob.AddOrUpdate<RecurringExpensesJob>(
+    "recurring-expenses-job",
+    job => job.RunAsync(),
+    Cron.Hourly);
 
 app.Run();

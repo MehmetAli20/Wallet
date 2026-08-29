@@ -17,4 +17,12 @@
         string Description,
         DateTimeOffset OccurredAt,
         IReadOnlyList<ExpenseParticipantRequest> Participants);
+    public record CreateRecurringExpenseRequest(
+        Guid GroupId,
+        Guid PayerId,
+        decimal Amount,
+        string Description,
+        Wallet.Domain.Expenses.RecurrenceInterval Interval,
+        DateTimeOffset FirstOccurrence,
+        IReadOnlyList<ExpenseParticipantRequest> Participants);
 }

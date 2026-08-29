@@ -9,6 +9,7 @@ using Wallet.Application.Activity.GetGroupActivity;
 using Wallet.Application.Activity.GetUnreadActivity;
 using Wallet.Application.Activity.MarkActivitySeen;
 using Wallet.Application.Groups.CreateGroup;
+using Wallet.Application.Groups.EnsurePair;
 using Wallet.Application.Groups.GetGroupBalance;
 using Wallet.Application.Groups.GetMyGroups;
 using Wallet.Application.Groups.InviteToGroup;
@@ -31,6 +32,17 @@ namespace Wallet.Api.Controllers
         {
             var id = await _sender.Send(new CreateGroupCommand(request.Name, request.Currency), cancellationToken);
             return StatusCode(StatusCodes.Status201Created, id);
+        }
+
+        [HttpPost("pairs")]
+        public async Task<ActionResult<Guid>> EnsurePair(
+            EnsurePairRequest request,
+            CancellationToken cancellationToken)
+        {
+            var id = await _sender.Send(
+                new EnsurePairCommand(request.UserId, request.Currency), cancellationToken);
+
+            return Ok(id);
         }
 
         [HttpGet]

@@ -8,7 +8,6 @@ using Wallet.Domain.Activity;
 using Wallet.Domain.Expenses;
 using Wallet.Domain.Groups;
 using Wallet.Domain.Settlements;
-using Wallet.Domain.Transfers;
 using Wallet.Domain.Users;
 
 namespace Wallet.Infrastructure.Persistence
@@ -25,7 +24,7 @@ namespace Wallet.Infrastructure.Persistence
         public DbSet<Account> Accounts => Set<Account>();
         public DbSet<User> Users => Set<User>();
         public DbSet<LedgerEntry> LedgerEntries => Set<LedgerEntry>();
-        public DbSet<ScheduledTransfer> ScheduledTransfers => Set<ScheduledTransfer>();
+        public DbSet<RecurringExpense> RecurringExpenses => Set<RecurringExpense>();
         public DbSet<Group> Groups => Set<Group>();
         public DbSet<Expense> Expenses => Set<Expense>();
         public DbSet<Settlement> Settlements => Set<Settlement>();
@@ -54,6 +53,11 @@ namespace Wallet.Infrastructure.Persistence
             modelbuilder.Entity<ActivityEntry>()
                 .HasQueryFilter(a => _currentUser.IsSystem
                     || Set<Group>().Any(g => g.Id == a.GroupId
+                        && g.Members.Any(m => m.UserId == _currentUser.UserId
+                            && m.Status == GroupMemberStatus.Active)));
+            modelbuilder.Entity<RecurringExpense>()
+                .HasQueryFilter(r => _currentUser.IsSystem
+                    || Set<Group>().Any(g => g.Id == r.GroupId
                         && g.Members.Any(m => m.UserId == _currentUser.UserId
                             && m.Status == GroupMemberStatus.Active)));
             modelbuilder.Entity<GroupActivityRead>()

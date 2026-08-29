@@ -615,6 +615,91 @@ namespace Wallet.IntegrationTests.Api
             response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         }
 
+        [Fact]
+        public async Task AskingForAPairTwice_ReturnsTheSameGroup()
+        {
+            var alice = await _fixture.RegisterAsync();
+            var bob = await _fixture.RegisterAsync();
+
+            var first = await EnsurePairAsync(alice, bob);
+            var second = await EnsurePairAsync(alice, bob);
+
+            second.Should().Be(first);
+        }
+
+        [Fact]
+        public async Task EitherSideAsking_LandsOnTheSamePair()
+        {
+            var alice = await _fixture.RegisterAsync();
+            var bob = await _fixture.RegisterAsync();
+
+            var fromAlice = await EnsurePairAsync(alice, bob);
+            var fromBob = await EnsurePairAsync(bob, alice);
+
+            fromBob.Should().Be(fromAlice);
+        }
+
+        [Fact]
+        public async Task TheSameTwoPeopleInAnotherCurrency_GetASeparatePair()
+        {
+            var alice = await _fixture.RegisterAsync();
+            var bob = await _fixture.RegisterAsync();
+
+            var tryPair = await EnsurePairAsync(alice, bob);
+            var eurPair = await EnsurePairAsync(alice, bob, "EUR");
+
+            eurPair.Should().NotBe(tryPair);
+        }
+
+        [Fact]
+        public async Task AnExpenseInAPair_SplitsAndSettlesLikeAnyOtherGroup()
+        {
+            var alice = await _fixture.RegisterAsync();
+            var bob = await _fixture.RegisterAsync();
+
+            var pairId = await EnsurePairAsync(alice, bob);
+
+            await CreateExpenseAsync(alice, pairId, 90m, new[] { alice, bob });
+
+            var balance = await BalanceAsync(bob, pairId);
+
+            Net(balance, alice.Id).Should().Be(45m);
+            Net(balance, bob.Id).Should().Be(-45m);
+
+            await SettleAsync(bob, pairId, alice, 45m);
+
+            var after = await BalanceAsync(bob, pairId);
+
+            after.Positions.Should().OnlyContain(pos => pos.Net == 0m);
+            after.Debts.Should().BeEmpty();
+        }
+
+        [Fact]
+        public async Task APairCannotTakeAThirdMember()
+        {
+            var alice = await _fixture.RegisterAsync();
+            var bob = await _fixture.RegisterAsync();
+            var carol = await _fixture.RegisterAsync();
+
+            var pairId = await EnsurePairAsync(alice, bob);
+
+            var response = await alice.Client.PostAsJsonAsync(
+                $"/api/groups/{pairId}/members", new InviteToGroupRequest(carol.Id));
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        [Fact]
+        public async Task PairingWithYourself_IsRejected()
+        {
+            var alice = await _fixture.RegisterAsync();
+
+            var response = await alice.Client.PostAsJsonAsync(
+                "/api/groups/pairs", new EnsurePairRequest(alice.Id, "TRY"));
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
         private static async Task<Guid> CreateGroupAsync(TestUser owner, string currency = "TRY")
         {
             var created = await owner.Client.PostAsJsonAsync(
@@ -676,6 +761,17 @@ namespace Wallet.IntegrationTests.Api
             message.Headers.Add("Idempotency-Key", idempotencyKey ?? Guid.NewGuid().ToString());
 
             return await sender.Client.SendAsync(message);
+        }
+
+        private static async Task<Guid> EnsurePairAsync(
+            TestUser caller, TestUser other, string currency = "TRY")
+        {
+            var response = await caller.Client.PostAsJsonAsync(
+                "/api/groups/pairs", new EnsurePairRequest(other.Id, currency));
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            return await response.Content.ReadFromJsonAsync<Guid>();
         }
 
         private static async Task<int> UnreadCountAsync(TestUser user, Guid groupId)

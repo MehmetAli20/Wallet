@@ -71,6 +71,9 @@ namespace Wallet.Domain.Groups
             group._members.Add(new GroupMember(
                 Guid.NewGuid(), id, userB, GroupMemberRole.Member, GroupMemberStatus.Active));
 
+            group.Raise(new MemberJoined(id, userA, DateTimeOffset.UtcNow));
+            group.Raise(new MemberJoined(id, userB, DateTimeOffset.UtcNow));
+
             return group;
         }
 
