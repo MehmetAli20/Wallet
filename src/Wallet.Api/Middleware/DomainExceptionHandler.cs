@@ -37,11 +37,13 @@ namespace Wallet.Api.Middleware
                 UsernameAlreadyExistsException => (StatusCodes.Status409Conflict, "Username already exists"),
                 UniqueConstraintViolationException => (StatusCodes.Status409Conflict, "Conflict"),
                 IdempotentResponseUnavailableException => (StatusCodes.Status409Conflict, "Idempotent response unavailable"),
+                IdempotencyKeyReuseException => (StatusCodes.Status409Conflict, "Idempotency key reuse"),
                 EmailAlreadyExistsException => (StatusCodes.Status409Conflict, "Email already exists"),
                 GroupNotFoundException => (StatusCodes.Status404NotFound, "Group not found"),
                 InvitationNotFoundException => (StatusCodes.Status404NotFound, "Invitation not found"),
                 InvalidGroupOperationException => (StatusCodes.Status400BadRequest, "Invalid group operation"),
                 InvalidExpenseException => (StatusCodes.Status400BadRequest, "Invalid expense"),
+                ExpenseNotFoundException => (StatusCodes.Status404NotFound, "Expense not found"),
                 _ => (0, string.Empty)
             };
             if(statusCode == 0)

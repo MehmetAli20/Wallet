@@ -9,4 +9,12 @@
         string Description,
         DateTimeOffset OccurredAt,
         IReadOnlyList<ExpenseParticipantRequest> Participants);
+
+    public record ReverseExpenseRequest(string? Reason);
+
+    public record ReviseExpenseRequest(
+        decimal Amount,
+        string Description,
+        DateTimeOffset OccurredAt,
+        IReadOnlyList<ExpenseParticipantRequest> Participants);
 }

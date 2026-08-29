@@ -261,5 +261,88 @@ namespace Wallet.UnitTests.Domain.Expenses
 
             accounts.Values.Should().OnlyContain(a => a.Entries.Count == 0);
         }
+
+        [Fact]
+        public void Reverse_MirrorsEveryLeg_AndReturnsEveryoneToZero()
+        {
+            var (group, members, accounts) = NewGroup(5);
+
+            var expense = Expense.Create(Guid.NewGuid(), group, members[0], 250m, "Market",
+                DateTimeOffset.UtcNow, members);
+
+            _service.Post(expense, accounts);
+            _service.Reverse(expense, accounts);
+
+            accounts.Values.Should().OnlyContain(a => a.Balance.Amount == 0m);
+        }
+
+        [Fact]
+        public void Reverse_AppendsEntries_AndRemovesNone()
+        {
+            var (group, members, accounts) = NewGroup(3);
+
+            var expense = Expense.Create(Guid.NewGuid(), group, members[0], 90m, "Market",
+                DateTimeOffset.UtcNow, members);
+
+            _service.Post(expense, accounts);
+            var afterPost = accounts.Values.Sum(a => a.Entries.Count);
+
+            _service.Reverse(expense, accounts);
+
+            accounts.Values.Sum(a => a.Entries.Count).Should().Be(afterPost * 2);
+        }
+
+        [Fact]
+        public void Reverse_RecordsCreditForTheDebtor_AndDebitForThePayer()
+        {
+            var (group, members, accounts) = NewGroup(2);
+            var payer = members[0];
+            var other = members[1];
+
+            var expense = Expense.Create(Guid.NewGuid(), group, payer, 100m, "Market",
+                DateTimeOffset.UtcNow, members);
+
+            _service.Post(expense, accounts);
+            _service.Reverse(expense, accounts);
+
+            accounts[other].Entries.Select(e => e.Type).Should()
+                .Equal(LedgerEntryType.Debit, LedgerEntryType.Credit);
+            accounts[payer].Entries.Select(e => e.Type).Should()
+                .Equal(LedgerEntryType.Credit, LedgerEntryType.Debit);
+        }
+
+        [Fact]
+        public void Reverse_SkipsThePayersOwnShare_JustLikePosting()
+        {
+            var (group, members, accounts) = NewGroup(3);
+            var payer = members[0];
+
+            var expense = Expense.Create(Guid.NewGuid(), group, payer, 90m, "Market",
+                DateTimeOffset.UtcNow, members);
+
+            _service.Post(expense, accounts);
+            _service.Reverse(expense, accounts);
+
+            accounts[payer].Entries.Should().HaveCount(4);
+            accounts[payer].Entries.Should().OnlyContain(e => e.CounterpartyId != payer);
+        }
+
+        [Fact]
+        public void Reverse_SkipsZeroShares_JustLikePosting()
+        {
+            var (group, members, accounts) = NewGroup(4);
+            var payer = members[0];
+            var excused = members[1];
+
+            var expense = Expense.Create(Guid.NewGuid(), group, payer, 90m, "Market",
+                DateTimeOffset.UtcNow, members,
+                new Dictionary<Guid, decimal> { [excused] = 0m });
+
+            _service.Post(expense, accounts);
+            _service.Reverse(expense, accounts);
+
+            accounts[excused].Entries.Should().BeEmpty();
+            accounts.Values.Should().OnlyContain(a => a.Balance.Amount == 0m);
+        }
     }
 }

@@ -12,7 +12,7 @@ namespace Wallet.Infrastructure.Persistence.Configurations
         public void Configure(EntityTypeBuilder<IdempotencyRecord> builder)
         {
             builder.ToTable("IdempotencyRecords");
-            builder.HasKey(x => x.Key);
+            builder.HasKey(x => new { x.UserId, x.Key });
             builder.Property(x => x.Key).HasMaxLength(100);
             builder.Property(x => x.RequestName).HasMaxLength(200);
         }

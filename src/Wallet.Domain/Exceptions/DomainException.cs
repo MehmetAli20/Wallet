@@ -43,4 +43,9 @@ namespace Wallet.Domain.Exceptions
     {
         public GroupNotFoundException(Guid groupId) : base($"Group {groupId} was not found.") { }
     }
+
+    public class ExpenseNotFoundException : DomainException
+    {
+        public ExpenseNotFoundException(Guid expenseId) : base($"Expense {expenseId} was not found.") { }
+    }
 }

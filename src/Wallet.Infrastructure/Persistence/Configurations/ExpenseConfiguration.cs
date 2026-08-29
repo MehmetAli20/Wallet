@@ -13,6 +13,7 @@ namespace Wallet.Infrastructure.Persistence.Configurations
 
             builder.Property(e => e.Description).HasMaxLength(200).IsRequired();
             builder.Property(e => e.OccurredAt);
+            builder.Property(e => e.ReversalReason).HasMaxLength(200);
 
             builder.ComplexProperty(e => e.Total, m =>
             {
@@ -28,6 +29,11 @@ namespace Wallet.Infrastructure.Persistence.Configurations
             builder.Metadata
                 .FindNavigation(nameof(Expense.Splits))!
                 .SetPropertyAccessMode(PropertyAccessMode.Field);
+
+            builder.HasOne<Expense>()
+                .WithMany()
+                .HasForeignKey(e => e.ReplacesExpenseId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasIndex(e => new { e.GroupId, e.OccurredAt });
         }

@@ -21,7 +21,9 @@ public class IdempotencyBehavior<TRequest, TResponse> : IPipelineBehavior<TReque
     public async Task<TResponse> Handle(
         TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
     {
-        var lookup = await _store.FindAsync(request.IdempotencyKey, cancellationToken);
+        var requestName = typeof(TRequest).Name;
+
+        var lookup = await _store.FindAsync(request.IdempotencyKey, requestName, cancellationToken);
 
         if (lookup.Exists)
         {
@@ -33,7 +35,7 @@ public class IdempotencyBehavior<TRequest, TResponse> : IPipelineBehavior<TReque
             return JsonSerializer.Deserialize<TResponse>(lookup.Response)!;
         }
 
-        _store.Stage(request.IdempotencyKey, typeof(TRequest).Name);
+        _store.Stage(request.IdempotencyKey, requestName);
 
         var response = await next();
 

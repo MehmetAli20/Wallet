@@ -16,6 +16,13 @@ namespace Wallet.Domain.Expenses
         public DateTimeOffset OccurredAt { get; private set; }
         public IReadOnlyList<ExpenseSplit> Splits => _splits.AsReadOnly();
 
+        public DateTimeOffset? ReversedAt { get; private set; }
+        public Guid? ReversedBy { get; private set; }
+        public string? ReversalReason { get; private set; }
+        public Guid? ReplacesExpenseId { get; private set; }
+
+        public bool IsReversed => ReversedAt is not null;
+
         private Expense()
         {
             Total = null!;
@@ -30,7 +37,8 @@ namespace Wallet.Domain.Expenses
             string description,
             DateTimeOffset occurredAt,
             IReadOnlyList<Guid> participants,
-            IReadOnlyDictionary<Guid, decimal>? fixedShares = null)
+            IReadOnlyDictionary<Guid, decimal>? fixedShares = null,
+            Guid? replacesExpenseId = null)
         {
             if (id == Guid.Empty)
                 throw new ArgumentException("Expense Id cannot be empty.", nameof(id));
@@ -63,7 +71,8 @@ namespace Wallet.Domain.Expenses
                 PayerId = payerId,
                 Total = new Money(amount, group.Currency),
                 Description = description.Trim(),
-                OccurredAt = occurredAt.ToUniversalTime()
+                OccurredAt = occurredAt.ToUniversalTime(),
+                ReplacesExpenseId = replacesExpenseId
             };
 
             foreach (var (participantId, share) in allocation)
@@ -73,6 +82,19 @@ namespace Wallet.Domain.Expenses
             }
 
             return expense;
+        }
+
+        public void Reverse(Guid reversedBy, DateTimeOffset at, string? reason = null)
+        {
+            if (IsReversed)
+                throw new InvalidExpenseException("This expense has already been reversed.");
+
+            if (reversedBy == Guid.Empty)
+                throw new ArgumentException("ReversedBy cannot be empty.", nameof(reversedBy));
+
+            ReversedAt = at.ToUniversalTime();
+            ReversedBy = reversedBy;
+            ReversalReason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
         }
     }
 }

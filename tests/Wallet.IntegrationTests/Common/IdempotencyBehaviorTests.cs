@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Wallet.Application.Abstractions;
 using Wallet.Application.Abstractions.Exceptions;
+using Wallet.Application.Abstractions.Users;
 using Wallet.Application.Common.Behaviors;
 using Wallet.Infrastructure.Persistence;
 using Wallet.Infrastructure.Persistence.Idempotency;
@@ -13,8 +14,11 @@ public class IdempotencyBehaviorTests : IClassFixture<PostgresFixture>
 
     private record FakeRequest(string IdempotencyKey) : IIdempotentRequest;
 
-    private static IdempotencyBehavior<FakeRequest, Guid> CreateBehavior(WalletDbContext context) =>
-        new(new IdempotencyStore(context), new UnitOfWork(context));
+    private record OtherFakeRequest(string IdempotencyKey) : IIdempotentRequest;
+
+    private static IdempotencyBehavior<FakeRequest, Guid> CreateBehavior(
+        WalletDbContext context, ICurrentUser currentUser) =>
+        new(new IdempotencyStore(context, currentUser), new UnitOfWork(context));
 
     [Fact]
     public async Task FirstCall_InvokesHandler_AndStoresResponse()
@@ -25,7 +29,7 @@ public class IdempotencyBehaviorTests : IClassFixture<PostgresFixture>
 
         await using var context = _fixture.CreateContext(TestCurrentUser.System);
 
-        var result = await CreateBehavior(context).Handle(
+        var result = await CreateBehavior(context, TestCurrentUser.System).Handle(
             new FakeRequest(key),
             _ => { callCount++; return Task.FromResult(expected); },
             CancellationToken.None);
@@ -42,7 +46,7 @@ public class IdempotencyBehaviorTests : IClassFixture<PostgresFixture>
 
         await using (var context = _fixture.CreateContext(TestCurrentUser.System))
         {
-            await CreateBehavior(context).Handle(
+            await CreateBehavior(context, TestCurrentUser.System).Handle(
                 new FakeRequest(key),
                 _ => Task.FromResult(expected),
                 CancellationToken.None);
@@ -52,7 +56,7 @@ public class IdempotencyBehaviorTests : IClassFixture<PostgresFixture>
 
         await using (var context = _fixture.CreateContext(TestCurrentUser.System))
         {
-            var result = await CreateBehavior(context).Handle(
+            var result = await CreateBehavior(context, TestCurrentUser.System).Handle(
                 new FakeRequest(key),
                 _ => { callCount++; return Task.FromResult(Guid.NewGuid()); },
                 CancellationToken.None);
@@ -69,18 +73,79 @@ public class IdempotencyBehaviorTests : IClassFixture<PostgresFixture>
 
         await using (var context = _fixture.CreateContext(TestCurrentUser.System))
         {
-            new IdempotencyStore(context).Stage(key, nameof(FakeRequest));
+            new IdempotencyStore(context, TestCurrentUser.System).Stage(key, nameof(FakeRequest));
             await new UnitOfWork(context).SaveChangesAsync();
         }
 
         await using (var context = _fixture.CreateContext(TestCurrentUser.System))
         {
-            var act = async () => await CreateBehavior(context).Handle(
+            var act = async () => await CreateBehavior(context, TestCurrentUser.System).Handle(
                 new FakeRequest(key),
                 _ => Task.FromResult(Guid.NewGuid()),
                 CancellationToken.None);
 
             await act.Should().ThrowAsync<IdempotentResponseUnavailableException>();
+        }
+    }
+
+    [Fact]
+    public async Task TheSameKeyFromAnotherUser_RunsItsOwnHandler_AndNeverSeesTheFirstResponse()
+    {
+        var key = $"key-{Guid.NewGuid()}";
+        var alice = TestCurrentUser.For(Guid.NewGuid());
+        var bob = TestCurrentUser.For(Guid.NewGuid());
+
+        var aliceResult = Guid.NewGuid();
+        var bobResult = Guid.NewGuid();
+
+        await using (var context = _fixture.CreateContext(alice))
+        {
+            await CreateBehavior(context, alice).Handle(
+                new FakeRequest(key),
+                _ => Task.FromResult(aliceResult),
+                CancellationToken.None);
+        }
+
+        var callCount = 0;
+
+        await using (var context = _fixture.CreateContext(bob))
+        {
+            var result = await CreateBehavior(context, bob).Handle(
+                new FakeRequest(key),
+                _ => { callCount++; return Task.FromResult(bobResult); },
+                CancellationToken.None);
+
+            result.Should().Be(bobResult);
+            result.Should().NotBe(aliceResult);
+            callCount.Should().Be(1);
+        }
+    }
+
+    [Fact]
+    public async Task TheSameKeyForADifferentCommand_IsRejected()
+    {
+        var key = $"key-{Guid.NewGuid()}";
+        var user = TestCurrentUser.For(Guid.NewGuid());
+
+        await using (var context = _fixture.CreateContext(user))
+        {
+            await CreateBehavior(context, user).Handle(
+                new FakeRequest(key),
+                _ => Task.FromResult(Guid.NewGuid()),
+                CancellationToken.None);
+        }
+
+        await using (var context = _fixture.CreateContext(user))
+        {
+            var behavior = new IdempotencyBehavior<OtherFakeRequest, Guid>(
+                new IdempotencyStore(context, user), new UnitOfWork(context));
+
+            var act = async () => await behavior.Handle(
+                new OtherFakeRequest(key),
+                _ => Task.FromResult(Guid.NewGuid()),
+                CancellationToken.None);
+
+            await act.Should().ThrowAsync<IdempotencyKeyReuseException>();
         }
     }
 }

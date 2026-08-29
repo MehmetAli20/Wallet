@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
+using Wallet.Api.Contracts.Accounts.Responses;
 using Wallet.Api.Contracts.Expenses.Requests;
 using Wallet.Api.Contracts.Groups.Requests;
 using Wallet.Api.Contracts.Groups.Responses;
@@ -295,6 +296,143 @@ namespace Wallet.IntegrationTests.Api
             after.Positions.Sum(p => p.Net).Should().Be(0m);
         }
 
+        [Fact]
+        public async Task ReversingAnExpense_ClearsEveryPosition()
+        {
+            var (groupId, members) = await GroupOfAsync(3);
+            var payer = members[0];
+
+            var expenseId = await CreateExpenseAsync(payer, groupId, 90m, members);
+
+            var reversal = await ReverseAsync(members[1], expenseId, "wrong amount");
+            reversal.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            var after = await BalanceAsync(payer, groupId);
+
+            after.Positions.Should().OnlyContain(pos => pos.Net == 0m);
+            after.Debts.Should().BeEmpty();
+        }
+
+        [Fact]
+        public async Task ReversingAnExpense_AppendsEntries_AndDeletesNone()
+        {
+            var (groupId, members) = await GroupOfAsync(3);
+            var payer = members[0];
+
+            var expenseId = await CreateExpenseAsync(payer, groupId, 90m, members);
+            var before = await LedgerEntryCountAsync(payer);
+
+            await ReverseAsync(payer, expenseId);
+
+            var after = await LedgerEntryCountAsync(payer);
+
+            after.Should().BeGreaterThan(before);
+        }
+
+        [Fact]
+        public async Task ReversingTwice_IsRejected()
+        {
+            var (groupId, members) = await GroupOfAsync(3);
+            var payer = members[0];
+
+            var expenseId = await CreateExpenseAsync(payer, groupId, 90m, members);
+
+            (await ReverseAsync(payer, expenseId)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+            (await ReverseAsync(payer, expenseId)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        [Fact]
+        public async Task ReversingAnExpenseInAGroupYouAreNotIn_Returns404()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+            var expenseId = await CreateExpenseAsync(members[0], groupId, 50m, members);
+
+            var outsider = await _fixture.RegisterAsync();
+
+            var response = await ReverseAsync(outsider, expenseId);
+
+            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        }
+
+        [Fact]
+        public async Task ReversingAnExpenseThatWasAlreadySettled_TurnsTheCreditorIntoTheDebtor()
+        {
+            var (groupId, members) = await GroupOfAsync(3);
+            var creditor = members[0];
+            var debtor = members[1];
+
+            var expenseId = await CreateExpenseAsync(creditor, groupId, 90m, members);
+
+            await SettleAsync(debtor, groupId, creditor, 30m);
+            await ReverseAsync(creditor, expenseId);
+
+            var after = await BalanceAsync(creditor, groupId);
+
+            Net(after, debtor.Id).Should().Be(30m);
+            Net(after, creditor.Id).Should().Be(-30m);
+            Net(after, members[2].Id).Should().Be(0m);
+            after.Positions.Sum(pos => pos.Net).Should().Be(0m);
+        }
+
+        [Fact]
+        public async Task RevisingAnExpense_ReversesTheOriginal_AndPostsTheNewAmounts()
+        {
+            var (groupId, members) = await GroupOfAsync(3);
+            var payer = members[0];
+
+            var expenseId = await CreateExpenseAsync(payer, groupId, 90m, members);
+
+            var response = await ReviseAsync(payer, expenseId, new ReviseExpenseRequest(
+                60m, "Market", DateTimeOffset.UtcNow, Participants(members)));
+
+            response.StatusCode.Should().Be(HttpStatusCode.Created);
+
+            var revisionId = await response.Content.ReadFromJsonAsync<Guid>();
+            revisionId.Should().NotBe(expenseId);
+
+            var after = await BalanceAsync(payer, groupId);
+
+            Net(after, payer.Id).Should().Be(40m);
+            foreach (var member in members.Skip(1))
+                Net(after, member.Id).Should().Be(-20m);
+
+            after.Positions.Sum(pos => pos.Net).Should().Be(0m);
+        }
+
+        [Fact]
+        public async Task RevisingAsSomeoneOtherThanThePayer_IsRejected()
+        {
+            var (groupId, members) = await GroupOfAsync(3);
+            var payer = members[0];
+            var freeloader = members[1];
+
+            var expenseId = await CreateExpenseAsync(payer, groupId, 90m, members);
+
+            // Dropping yourself from the participants would erase your own debt onto the others.
+            var response = await ReviseAsync(freeloader, expenseId, new ReviseExpenseRequest(
+                90m, "Market", DateTimeOffset.UtcNow, Participants(payer, members[2])));
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+            var after = await BalanceAsync(payer, groupId);
+            Net(after, freeloader.Id).Should().Be(-30m);
+        }
+
+        [Fact]
+        public async Task RevisingTheSameExpenseTwice_IsRejected()
+        {
+            var (groupId, members) = await GroupOfAsync(3);
+            var payer = members[0];
+
+            var expenseId = await CreateExpenseAsync(payer, groupId, 90m, members);
+
+            var request = new ReviseExpenseRequest(
+                60m, "Market", DateTimeOffset.UtcNow, Participants(members));
+
+            (await ReviseAsync(payer, expenseId, request)).StatusCode.Should().Be(HttpStatusCode.Created);
+            (await ReviseAsync(payer, expenseId, request)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
         private static async Task<Guid> CreateGroupAsync(TestUser owner, string currency = "TRY")
         {
             var created = await owner.Client.PostAsJsonAsync(
@@ -356,6 +494,60 @@ namespace Wallet.IntegrationTests.Api
             message.Headers.Add("Idempotency-Key", idempotencyKey ?? Guid.NewGuid().ToString());
 
             return await sender.Client.SendAsync(message);
+        }
+
+        private static async Task<Guid> CreateExpenseAsync(
+            TestUser payer, Guid groupId, decimal amount, IEnumerable<TestUser> participants)
+        {
+            var created = await PostExpenseAsync(payer, new CreateExpenseRequest(
+                groupId, payer.Id, amount, "Market", DateTimeOffset.UtcNow,
+                Participants(participants.ToArray())));
+
+            created.StatusCode.Should().Be(HttpStatusCode.Created);
+
+            return await created.Content.ReadFromJsonAsync<Guid>();
+        }
+
+        private static async Task<HttpResponseMessage> ReverseAsync(
+            TestUser actor, Guid expenseId, string? reason = null, string? idempotencyKey = null)
+        {
+            using var message = new HttpRequestMessage(
+                HttpMethod.Post, $"/api/expenses/{expenseId}/reversal")
+            {
+                Content = JsonContent.Create(new ReverseExpenseRequest(reason))
+            };
+            message.Headers.Add("Idempotency-Key", idempotencyKey ?? Guid.NewGuid().ToString());
+
+            return await actor.Client.SendAsync(message);
+        }
+
+        private static async Task<HttpResponseMessage> ReviseAsync(
+            TestUser actor, Guid expenseId, ReviseExpenseRequest request, string? idempotencyKey = null)
+        {
+            using var message = new HttpRequestMessage(
+                HttpMethod.Post, $"/api/expenses/{expenseId}/revisions")
+            {
+                Content = JsonContent.Create(request)
+            };
+            message.Headers.Add("Idempotency-Key", idempotencyKey ?? Guid.NewGuid().ToString());
+
+            return await actor.Client.SendAsync(message);
+        }
+
+        private static async Task<int> LedgerEntryCountAsync(TestUser user)
+        {
+            var accounts = await user.Client.GetFromJsonAsync<List<AccountListResponse>>("/api/accounts");
+            var total = 0;
+
+            foreach (var account in accounts!)
+            {
+                var detail = await user.Client.GetFromJsonAsync<AccountResponse>(
+                    $"/api/accounts/{account.Id}");
+
+                total += detail!.Entries.Count;
+            }
+
+            return total;
         }
 
         private static async Task<HttpResponseMessage> SettleAsync(

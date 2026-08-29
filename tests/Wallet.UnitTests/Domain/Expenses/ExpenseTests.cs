@@ -169,5 +169,84 @@ namespace Wallet.UnitTests.Domain.Expenses
             expense.Total.Currency.Should().Be("TRY");
             expense.Splits.Should().OnlyContain(s => s.Share.Currency == "TRY");
         }
+
+        [Fact]
+        public void Reverse_RecordsWhoDidItAndWhen()
+        {
+            var (group, members) = NewGroup(3);
+            var actor = members[1];
+            var at = DateTimeOffset.UtcNow;
+
+            var expense = Expense.Create(Guid.NewGuid(), group, members[0], 90m, "Market",
+                DateTimeOffset.UtcNow, members);
+
+            expense.IsReversed.Should().BeFalse();
+
+            expense.Reverse(actor, at, "  wrong amount  ");
+
+            expense.IsReversed.Should().BeTrue();
+            expense.ReversedBy.Should().Be(actor);
+            expense.ReversedAt.Should().Be(at.ToUniversalTime());
+            expense.ReversalReason.Should().Be("wrong amount");
+        }
+
+        [Fact]
+        public void ReversingTwice_Throws()
+        {
+            var (group, members) = NewGroup(3);
+
+            var expense = Expense.Create(Guid.NewGuid(), group, members[0], 90m, "Market",
+                DateTimeOffset.UtcNow, members);
+
+            expense.Reverse(members[0], DateTimeOffset.UtcNow);
+
+            var act = () => expense.Reverse(members[1], DateTimeOffset.UtcNow);
+
+            act.Should().Throw<InvalidExpenseException>();
+        }
+
+        [Fact]
+        public void Reverse_WithAnEmptyActor_Throws()
+        {
+            var (group, members) = NewGroup(3);
+
+            var expense = Expense.Create(Guid.NewGuid(), group, members[0], 90m, "Market",
+                DateTimeOffset.UtcNow, members);
+
+            var act = () => expense.Reverse(Guid.Empty, DateTimeOffset.UtcNow);
+
+            act.Should().Throw<ArgumentException>();
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        public void Reverse_WithABlankReason_StoresNull(string? reason)
+        {
+            var (group, members) = NewGroup(3);
+
+            var expense = Expense.Create(Guid.NewGuid(), group, members[0], 90m, "Market",
+                DateTimeOffset.UtcNow, members);
+
+            expense.Reverse(members[0], DateTimeOffset.UtcNow, reason);
+
+            expense.ReversalReason.Should().BeNull();
+        }
+
+        [Fact]
+        public void ARevision_PointsBackAtWhatItReplaces()
+        {
+            var (group, members) = NewGroup(3);
+
+            var original = Expense.Create(Guid.NewGuid(), group, members[0], 90m, "Market",
+                DateTimeOffset.UtcNow, members);
+
+            var revision = Expense.Create(Guid.NewGuid(), group, members[0], 60m, "Market",
+                DateTimeOffset.UtcNow, members, null, original.Id);
+
+            revision.ReplacesExpenseId.Should().Be(original.Id);
+            original.ReplacesExpenseId.Should().BeNull();
+        }
     }
 }
