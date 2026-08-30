@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using FluentAssertions;
 using Wallet.Api.Contracts.Groups.Requests;
 using Wallet.Api.Contracts.Groups.Responses;
+using Wallet.Api.Contracts.Common;
 
 namespace Wallet.IntegrationTests.Api
 {
@@ -50,7 +51,7 @@ namespace Wallet.IntegrationTests.Api
             var created = await client.PostAsJsonAsync("/api/groups", new CreateGroupRequest("Piknik", "TRY"));
             created.StatusCode.Should().Be(HttpStatusCode.Created);
 
-            var groupId = await created.Content.ReadFromJsonAsync<Guid>();
+            var groupId = (await created.Content.ReadFromJsonAsync<CreatedResponse>())!.Id;
 
             var groups = await client.GetFromJsonAsync<List<GroupResponse>>("/api/groups");
 
@@ -74,7 +75,7 @@ namespace Wallet.IntegrationTests.Api
             var client = (await _fixture.RegisterAsync()).Client;
 
             var created = await client.PostAsJsonAsync("/api/groups", new CreateGroupRequest("Piknik", "TRY"));
-            var groupId = await created.Content.ReadFromJsonAsync<Guid>();
+            var groupId = (await created.Content.ReadFromJsonAsync<CreatedResponse>())!.Id;
 
             var balance = await client.GetFromJsonAsync<GroupBalanceResponse>($"/api/groups/{groupId}/balance");
 

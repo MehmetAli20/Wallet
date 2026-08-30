@@ -5,7 +5,7 @@ using System.Text;
 using Wallet.Application.Abstractions.Expenses;
 using Wallet.Domain.Expenses;
 
-namespace Wallet.Infrastructure.Persistence.Repositories.ExpenseRepository
+namespace Wallet.Infrastructure.Persistence.Repositories.Expenses
 {
     public class ExpenseRepository : IExpenseRepository
     {
@@ -23,12 +23,25 @@ namespace Wallet.Infrastructure.Persistence.Repositories.ExpenseRepository
                 .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
         }
 
-        public async Task<IReadOnlyList<Expense>> GetByGroupAsync(Guid groupId, CancellationToken cancellationToken = default)
+        public async Task<IReadOnlyList<Expense>> GetByGroupAsync(
+            Guid groupId,
+            bool includeReversed,
+            int skip,
+            int take,
+            CancellationToken cancellationToken = default)
         {
-            return await _context.Expenses
+            var query = _context.Expenses
                 .Include(e => e.Splits)
-                .Where(e => e.GroupId == groupId)
+                .Where(e => e.GroupId == groupId);
+
+            if (!includeReversed)
+                query = query.Where(e => e.ReversedAt == null);
+
+            return await query
                 .OrderByDescending(e => e.OccurredAt)
+                .ThenByDescending(e => e.CreatedAt)
+                .Skip(skip)
+                .Take(take)
                 .ToListAsync(cancellationToken);
         }
 

@@ -3,7 +3,7 @@ using Wallet.Application.Abstractions.Groups;
 using Wallet.Domain.Common;
 using Wallet.Domain.Groups;
 
-namespace Wallet.Infrastructure.Persistence.Repositories.GroupRepository
+namespace Wallet.Infrastructure.Persistence.Repositories.Groups
 {
     public class GroupRepository : IGroupRepository
     {

@@ -1,11 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Wallet.Application.Abstractions.Activity;
-using Wallet.Application.Abstractions.Settlements;
 using Wallet.Application.Abstractions.Users;
 using Wallet.Domain.Activity;
-using Wallet.Domain.Settlements;
 
-namespace Wallet.Infrastructure.Persistence.Repositories
+namespace Wallet.Infrastructure.Persistence.Repositories.Activity
 {
     public class ActivityRepository : IActivityRepository
     {
@@ -58,21 +56,5 @@ namespace Wallet.Infrastructure.Persistence.Repositories
 
             return await query.ToListAsync(cancellationToken);
         }
-    }
-
-    public class SettlementRepository : ISettlementRepository
-    {
-        private readonly WalletDbContext _context;
-
-        public SettlementRepository(WalletDbContext context)
-        {
-            _context = context;
-        }
-
-        public async Task AddAsync(Settlement settlement, CancellationToken cancellationToken = default) =>
-            await _context.Settlements.AddAsync(settlement, cancellationToken);
-
-        public async Task<Settlement?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
-            await _context.Settlements.FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
     }
 }

@@ -5,7 +5,7 @@ using System.Text;
 using Wallet.Application.Abstractions.Accounts;
 using Wallet.Domain.Accounts;
 
-namespace Wallet.Infrastructure.Persistence.Repositories.AccountRepository
+namespace Wallet.Infrastructure.Persistence.Repositories.Accounts
 {
     public class AccountRepository : IAccountRepository
     {

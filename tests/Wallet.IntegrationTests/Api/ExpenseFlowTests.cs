@@ -4,12 +4,14 @@ using FluentAssertions;
 using Wallet.Api.Contracts.Accounts.Responses;
 using Wallet.Api.Contracts.Activity.Responses;
 using Wallet.Api.Contracts.Expenses.Requests;
+using Wallet.Api.Contracts.Expenses.Responses;
 using Wallet.Api.Contracts.Groups.Requests;
 using Wallet.Api.Contracts.Groups.Responses;
 using Wallet.Api.Contracts.Invitations.Responses;
 using Wallet.Api.Contracts.Placeholders;
 using Wallet.Api.Contracts.Users;
 using Wallet.Api.Contracts.Transfers;
+using Wallet.Api.Contracts.Common;
 
 namespace Wallet.IntegrationTests.Api
 {
@@ -148,8 +150,8 @@ namespace Wallet.IntegrationTests.Api
             first.StatusCode.Should().Be(HttpStatusCode.Created);
             second.StatusCode.Should().Be(HttpStatusCode.Created);
 
-            var firstId = await first.Content.ReadFromJsonAsync<Guid>();
-            var secondId = await second.Content.ReadFromJsonAsync<Guid>();
+            var firstId = (await first.Content.ReadFromJsonAsync<CreatedResponse>())!.Id;
+            var secondId = (await second.Content.ReadFromJsonAsync<CreatedResponse>())!.Id;
             secondId.Should().Be(firstId);
 
             var balance = await BalanceAsync(payer, groupId);
@@ -390,7 +392,7 @@ namespace Wallet.IntegrationTests.Api
 
             response.StatusCode.Should().Be(HttpStatusCode.Created);
 
-            var revisionId = await response.Content.ReadFromJsonAsync<Guid>();
+            var revisionId = (await response.Content.ReadFromJsonAsync<CreatedResponse>())!.Id;
             revisionId.Should().NotBe(expenseId);
 
             var after = await BalanceAsync(payer, groupId);
@@ -446,7 +448,7 @@ namespace Wallet.IntegrationTests.Api
                 groupId, payer.Id, 90m, "Market", DateTimeOffset.UtcNow, Participants(members)));
 
             created.StatusCode.Should().Be(HttpStatusCode.Created);
-            var expenseId = await created.Content.ReadFromJsonAsync<Guid>();
+            var expenseId = (await created.Content.ReadFromJsonAsync<CreatedResponse>())!.Id;
 
             var feed = await ActivityAsync(payer, groupId);
 
@@ -615,6 +617,22 @@ namespace Wallet.IntegrationTests.Api
             var response = await MarkSeenAsync(outsider, groupId, 1);
 
             response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        }
+
+        [Fact]
+        public async Task TheFirstPairRequestCreates_TheSecondOneOnlyFinds()
+        {
+            var alice = await _fixture.RegisterAsync();
+            var bob = await _fixture.RegisterAsync();
+
+            var first = await alice.Client.PostAsJsonAsync(
+                "/api/groups/pairs", new EnsurePairRequest(bob.Id, "TRY"));
+
+            var second = await alice.Client.PostAsJsonAsync(
+                "/api/groups/pairs", new EnsurePairRequest(bob.Id, "TRY"));
+
+            first.StatusCode.Should().Be(HttpStatusCode.Created);
+            second.StatusCode.Should().Be(HttpStatusCode.OK);
         }
 
         [Fact]
@@ -829,13 +847,115 @@ namespace Wallet.IntegrationTests.Api
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
 
+        [Fact]
+        public async Task TheExpenseList_ShowsWhatYouOweOnEachLine()
+        {
+            var (groupId, members) = await GroupOfAsync(3);
+            var payer = members[0];
+            var reader = members[1];
+
+            var expenseId = await CreateExpenseAsync(payer, groupId, 90m, members);
+
+            var list = await ExpensesAsync(reader, groupId);
+
+            var line = list.Should().ContainSingle().Subject;
+
+            line.Id.Should().Be(expenseId);
+            line.Amount.Should().Be(90m);
+            line.Currency.Should().Be("TRY");
+            line.PayerId.Should().Be(payer.Id);
+            line.MyShare.Should().Be(30m);
+            line.IsReversed.Should().BeFalse();
+            line.Splits.Should().HaveCount(3);
+        }
+
+        [Fact]
+        public async Task AReversedExpense_DropsOutOfTheListUnlessYouAskForIt()
+        {
+            var (groupId, members) = await GroupOfAsync(3);
+            var payer = members[0];
+
+            var kept = await CreateExpenseAsync(payer, groupId, 60m, members);
+            var cancelled = await CreateExpenseAsync(payer, groupId, 90m, members);
+
+            await ReverseAsync(payer, cancelled, "wrong amount");
+
+            var visible = await ExpensesAsync(payer, groupId);
+            visible.Should().ContainSingle().Which.Id.Should().Be(kept);
+
+            var everything = await ExpensesAsync(payer, groupId, includeReversed: true);
+            everything.Should().HaveCount(2);
+
+            var reversed = everything.Single(e => e.Id == cancelled);
+            reversed.IsReversed.Should().BeTrue();
+            reversed.ReversedBy.Should().Be(payer.Id);
+            reversed.ReversalReason.Should().Be("wrong amount");
+        }
+
+        [Fact]
+        public async Task ARevision_ShowsAsANewLineThatPointsAtTheOldOne()
+        {
+            var (groupId, members) = await GroupOfAsync(3);
+            var payer = members[0];
+
+            var original = await CreateExpenseAsync(payer, groupId, 90m, members);
+
+            var response = await ReviseAsync(payer, original, new ReviseExpenseRequest(
+                60m, "Market", DateTimeOffset.UtcNow, Participants(members)));
+
+            var revisionId = (await response.Content.ReadFromJsonAsync<CreatedResponse>())!.Id;
+
+            var visible = await ExpensesAsync(payer, groupId);
+
+            var line = visible.Should().ContainSingle().Subject;
+            line.Id.Should().Be(revisionId);
+            line.Amount.Should().Be(60m);
+            line.ReplacesExpenseId.Should().Be(original);
+        }
+
+        [Fact]
+        public async Task TheExpenseListIsPaged_NewestFirst()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+            var payer = members[0];
+
+            for (var i = 1; i <= 3; i++)
+            {
+                await PostExpenseAsync(payer, new CreateExpenseRequest(
+                    groupId, payer.Id, i * 10m, $"Market {i}",
+                    new DateTimeOffset(2026, 9, i, 0, 0, 0, TimeSpan.Zero), Participants(members)));
+            }
+
+            var firstPage = await ExpensesAsync(payer, groupId, take: 2);
+
+            firstPage.Should().HaveCount(2);
+            firstPage[0].Description.Should().Be("Market 3");
+            firstPage[1].Description.Should().Be("Market 2");
+
+            var secondPage = await ExpensesAsync(payer, groupId, skip: 2, take: 2);
+
+            secondPage.Should().ContainSingle()
+                .Which.Description.Should().Be("Market 1");
+        }
+
+        [Fact]
+        public async Task TheExpenseListOfAGroupYouAreNotIn_Returns404()
+        {
+            var (groupId, _) = await GroupOfAsync(2);
+            var outsider = await _fixture.RegisterAsync();
+
+            var response = await outsider.Client.GetAsync($"/api/groups/{groupId}/expenses");
+
+            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        }
+
         private static async Task<Guid> CreateGroupAsync(TestUser owner, string currency = "TRY")
         {
             var created = await owner.Client.PostAsJsonAsync(
                 "/api/groups", new CreateGroupRequest("Piknik", currency));
             created.StatusCode.Should().Be(HttpStatusCode.Created);
 
-            return await created.Content.ReadFromJsonAsync<Guid>();
+            return (await created.Content.ReadFromJsonAsync<CreatedResponse>())!.Id;
         }
 
         private static async Task JoinAsync(TestUser inviter, Guid groupId, TestUser invitee)
@@ -892,6 +1012,22 @@ namespace Wallet.IntegrationTests.Api
             return await sender.Client.SendAsync(message);
         }
 
+        private static async Task<List<ExpenseResponse>> ExpensesAsync(
+            TestUser user, Guid groupId, bool includeReversed = false, int skip = 0, int take = 0)
+        {
+            var url = $"/api/groups/{groupId}/expenses?includeReversed={includeReversed}";
+
+            if (skip > 0)
+                url += $"&skip={skip}";
+
+            if (take > 0)
+                url += $"&take={take}";
+
+            var expenses = await user.Client.GetFromJsonAsync<List<ExpenseResponse>>(url);
+
+            return expenses!;
+        }
+
         private static async Task<Guid> AddPlaceholderAsync(
             TestUser member, Guid groupId, string displayName)
         {
@@ -900,7 +1036,7 @@ namespace Wallet.IntegrationTests.Api
 
             response.StatusCode.Should().Be(HttpStatusCode.Created);
 
-            return await response.Content.ReadFromJsonAsync<Guid>();
+            return (await response.Content.ReadFromJsonAsync<CreatedResponse>())!.Id;
         }
 
         private static async Task<string> IssueClaimTokenAsync(TestUser member, Guid placeholderId)
@@ -921,7 +1057,7 @@ namespace Wallet.IntegrationTests.Api
 
             response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-            return await response.Content.ReadFromJsonAsync<Guid>();
+            return (await response.Content.ReadFromJsonAsync<CreatedResponse>())!.Id;
         }
 
         private static async Task<Guid> EnsurePairAsync(
@@ -930,9 +1066,9 @@ namespace Wallet.IntegrationTests.Api
             var response = await caller.Client.PostAsJsonAsync(
                 "/api/groups/pairs", new EnsurePairRequest(other.Id, currency));
 
-            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            response.StatusCode.Should().BeOneOf(HttpStatusCode.Created, HttpStatusCode.OK);
 
-            return await response.Content.ReadFromJsonAsync<Guid>();
+            return (await response.Content.ReadFromJsonAsync<CreatedResponse>())!.Id;
         }
 
         private static async Task<int> UnreadCountAsync(TestUser user, Guid groupId)
@@ -977,7 +1113,7 @@ namespace Wallet.IntegrationTests.Api
 
             created.StatusCode.Should().Be(HttpStatusCode.Created);
 
-            return await created.Content.ReadFromJsonAsync<Guid>();
+            return (await created.Content.ReadFromJsonAsync<CreatedResponse>())!.Id;
         }
 
         private static async Task<HttpResponseMessage> ReverseAsync(

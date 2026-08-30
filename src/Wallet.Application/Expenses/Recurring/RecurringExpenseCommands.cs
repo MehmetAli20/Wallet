@@ -17,7 +17,8 @@ namespace Wallet.Application.Expenses.Recurring
         RecurrenceInterval Interval,
         DateTimeOffset FirstOccurrence,
         IReadOnlyList<Guid> Participants,
-        IReadOnlyDictionary<Guid, decimal> FixedShares) : IRequest<Guid>;
+        IReadOnlyDictionary<Guid, decimal> FixedShares,
+        string IdempotencyKey) : IRequest<Guid>, IIdempotentRequest;
 
     public record CancelRecurringExpenseCommand(Guid RecurringExpenseId) : IRequest;
 
@@ -34,6 +35,7 @@ namespace Wallet.Application.Expenses.Recurring
             RuleFor(x => x.Interval).IsInEnum();
             RuleFor(x => x.FirstOccurrence).NotEqual(default(DateTimeOffset));
             RuleFor(x => x.Participants).NotEmpty();
+            RuleFor(x => x.IdempotencyKey).NotEmpty();
         }
     }
 

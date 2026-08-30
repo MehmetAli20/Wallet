@@ -2,7 +2,7 @@ using FluentAssertions;
 using Wallet.Application.Abstractions.Exceptions;
 using Wallet.Domain.Accounts;
 using Wallet.Infrastructure.Persistence;
-using Wallet.Infrastructure.Persistence.Repositories.AccountRepository;
+using Wallet.Infrastructure.Persistence.Repositories.Accounts;
 using Wallet.IntegrationTests;
 
 namespace Wallet.IntegrationTests.Persistence.Repositories

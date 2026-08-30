@@ -7,9 +7,9 @@ using Wallet.Domain.Expenses;
 using Wallet.Domain.Groups;
 using Wallet.Domain.Users;
 using Wallet.Infrastructure.Persistence;
-using ExpenseRepo = Wallet.Infrastructure.Persistence.Repositories.ExpenseRepository.ExpenseRepository;
-using GroupRepo = Wallet.Infrastructure.Persistence.Repositories.GroupRepository.GroupRepository;
-using UserRepo = Wallet.Infrastructure.Persistence.Repositories.UserRepository.UserRepository;
+using Wallet.Infrastructure.Persistence.Repositories.Groups;
+using Wallet.Infrastructure.Persistence.Repositories.Expenses;
+using Wallet.Infrastructure.Persistence.Repositories.Users;
 
 namespace Wallet.IntegrationTests.Persistence
 {
@@ -105,7 +105,7 @@ namespace Wallet.IntegrationTests.Persistence
             {
                 await SeedUserAsync(decliner);
 
-                var repository = new GroupRepo(context);
+                var repository = new GroupRepository(context);
                 var group = await repository.GetByIdAsync(groupId);
 
                 group!.Invite(decliner, creator);
@@ -116,7 +116,7 @@ namespace Wallet.IntegrationTests.Persistence
 
             await using (var verify = _fixture.CreateContext(TestCurrentUser.System))
             {
-                var group = await new GroupRepo(verify).GetByIdAsync(groupId);
+                var group = await new GroupRepository(verify).GetByIdAsync(groupId);
                 group!.Members.Should().NotContain(m => m.UserId == decliner);
 
                 var types = await verify.ActivityEntries
@@ -141,20 +141,20 @@ namespace Wallet.IntegrationTests.Persistence
         private static async Task AddExpenseAsync(
             WalletDbContext context, Guid groupId, Guid payer, Guid other, decimal amount)
         {
-            var group = await new GroupRepo(context).GetByIdAsync(groupId);
+            var group = await new GroupRepository(context).GetByIdAsync(groupId);
 
             var expense = Expense.Create(
                 Guid.NewGuid(), group!, payer, payer, amount, "Market",
                 DateTimeOffset.UtcNow, new List<Guid> { payer, other });
 
-            await new ExpenseRepo(context).AddAsync(expense);
+            await new ExpenseRepository(context).AddAsync(expense);
         }
 
         private async Task SeedUserAsync(Guid userId)
         {
             await using var context = _fixture.CreateContext(TestCurrentUser.System);
 
-            await new UserRepo(context).AddAsync(
+            await new UserRepository(context).AddAsync(
                 new User(userId, $"u{userId:N}", $"{userId:N}@test.com", "hash", UserRole.User));
 
             await new UnitOfWork(context).SaveChangesAsync();
@@ -176,7 +176,7 @@ namespace Wallet.IntegrationTests.Persistence
                 group.Accept(member);
             }
 
-            await new GroupRepo(context).AddAsync(group);
+            await new GroupRepository(context).AddAsync(group);
             await new UnitOfWork(context).SaveChangesAsync();
 
             return groupId;

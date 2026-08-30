@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Wallet.Domain.Accounts;
 using Wallet.Domain.Common;
 using Wallet.Infrastructure.Persistence;
-using Wallet.Infrastructure.Persistence.Repositories.AccountRepository;
+using Wallet.Infrastructure.Persistence.Repositories.Accounts;
 
 namespace Wallet.IntegrationTests.Persistence
 {

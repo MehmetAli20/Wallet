@@ -5,7 +5,7 @@ using Wallet.Application.Abstractions.Users;
 using Wallet.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 
-namespace Wallet.Infrastructure.Persistence.Repositories.UserRepository
+namespace Wallet.Infrastructure.Persistence.Repositories.Users
 {
     public class UserRepository : IUserRepository
     {

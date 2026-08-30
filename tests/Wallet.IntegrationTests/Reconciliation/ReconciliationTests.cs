@@ -4,8 +4,8 @@ using Wallet.Domain.Accounts;
 using Wallet.Domain.Common;
 using Wallet.Domain.Transfers;
 using Wallet.Infrastructure.Persistence;
-using Wallet.Infrastructure.Persistence.Repositories;
-using Wallet.Infrastructure.Persistence.Repositories.AccountRepository;
+using Wallet.Infrastructure.Persistence.Repositories.Reconciliation;
+using Wallet.Infrastructure.Persistence.Repositories.Accounts;
 
 namespace Wallet.IntegrationTests.Reconciliation
 {

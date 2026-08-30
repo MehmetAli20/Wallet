@@ -5,11 +5,10 @@ using Wallet.Domain.Expenses;
 using Wallet.Domain.Groups;
 using Wallet.Domain.Users;
 using Wallet.Infrastructure.Persistence;
-using Wallet.Infrastructure.Persistence.Repositories;
-using AccountRepo = Wallet.Infrastructure.Persistence.Repositories.AccountRepository.AccountRepository;
-using ExpenseRepo = Wallet.Infrastructure.Persistence.Repositories.ExpenseRepository.ExpenseRepository;
-using GroupRepo = Wallet.Infrastructure.Persistence.Repositories.GroupRepository.GroupRepository;
-using UserRepo = Wallet.Infrastructure.Persistence.Repositories.UserRepository.UserRepository;
+using Wallet.Infrastructure.Persistence.Repositories.Expenses;
+using Wallet.Infrastructure.Persistence.Repositories.Groups;
+using Wallet.Infrastructure.Persistence.Repositories.Accounts;
+using Wallet.Infrastructure.Persistence.Repositories.Users;
 
 namespace Wallet.IntegrationTests.Expenses
 {
@@ -21,9 +20,9 @@ namespace Wallet.IntegrationTests.Expenses
 
         private static PostRecurringOccurrenceCommandHandler CreateHandler(WalletDbContext context) =>
             new(new RecurringExpenseRepository(context),
-                new ExpenseRepo(context),
-                new GroupRepo(context),
-                new AccountRepo(context),
+                new ExpenseRepository(context),
+                new GroupRepository(context),
+                new AccountRepository(context),
                 new UnitOfWork(context),
                 new ExpensePostingService());
 
@@ -56,7 +55,7 @@ namespace Wallet.IntegrationTests.Expenses
                 expense.OccurredAt.Should().Be(occurrence);
                 expense.Splits.Should().HaveCount(2);
 
-                var accounts = new AccountRepo(context);
+                var accounts = new AccountRepository(context);
                 (await accounts.GetByOwnerAndCurrencyAsync(payer, "TRY"))!.Balance.Amount.Should().Be(450m);
                 (await accounts.GetByOwnerAndCurrencyAsync(other, "TRY"))!.Balance.Amount.Should().Be(-450m);
 
@@ -80,7 +79,7 @@ namespace Wallet.IntegrationTests.Expenses
 
             await using (var context = _fixture.CreateContext(TestCurrentUser.System))
             {
-                var group = await new GroupRepo(context).GetByIdAsync(brokenGroup);
+                var group = await new GroupRepository(context).GetByIdAsync(brokenGroup);
                 group!.Remove(other, payer);
                 await new UnitOfWork(context).SaveChangesAsync();
             }
@@ -134,7 +133,7 @@ namespace Wallet.IntegrationTests.Expenses
         {
             await using var context = _fixture.CreateContext(TestCurrentUser.System);
 
-            var group = await new GroupRepo(context).GetByIdAsync(groupId);
+            var group = await new GroupRepository(context).GetByIdAsync(groupId);
 
             var recurring = RecurringExpense.Create(
                 Guid.NewGuid(), group!, payer, payer, amount, "Kira",
@@ -153,7 +152,7 @@ namespace Wallet.IntegrationTests.Expenses
             if (await context.Users.AnyAsync(u => u.Id == userId))
                 return;
 
-            await new UserRepo(context).AddAsync(
+            await new UserRepository(context).AddAsync(
                 new User(userId, $"u{userId:N}", $"{userId:N}@test.com", "hash", UserRole.User));
 
             await new UnitOfWork(context).SaveChangesAsync();
@@ -175,7 +174,7 @@ namespace Wallet.IntegrationTests.Expenses
                 group.Accept(member);
             }
 
-            await new GroupRepo(context).AddAsync(group);
+            await new GroupRepository(context).AddAsync(group);
             await new UnitOfWork(context).SaveChangesAsync();
 
             return groupId;

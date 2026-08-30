@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Wallet.Api.Contracts.Common;
 using Wallet.Api.Contracts.Expenses.Requests;
 using Wallet.Api.Contracts.Expenses.Responses;
 using Wallet.Application.Expenses.Recurring;
@@ -19,8 +20,9 @@ namespace Wallet.Api.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<Guid>> Create(
+        public async Task<ActionResult<CreatedResponse>> Create(
             CreateRecurringExpenseRequest request,
+            [FromHeader(Name = "Idempotency-Key")] string idempotencyKey,
             CancellationToken cancellationToken)
         {
             var participants = request.Participants.Select(p => p.UserId).ToList();
@@ -37,9 +39,10 @@ namespace Wallet.Api.Controllers
                 request.Interval,
                 request.FirstOccurrence,
                 participants,
-                fixedShares), cancellationToken);
+                fixedShares,
+                idempotencyKey), cancellationToken);
 
-            return StatusCode(StatusCodes.Status201Created, id);
+            return StatusCode(StatusCodes.Status201Created, new CreatedResponse(id));
         }
 
         [HttpGet]

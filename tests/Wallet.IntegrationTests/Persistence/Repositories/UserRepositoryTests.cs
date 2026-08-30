@@ -6,7 +6,7 @@ using System.Text;
 using Wallet.Application.Abstractions.Exceptions;
 using Wallet.Domain.Users;
 using Wallet.Infrastructure.Persistence;
-using Wallet.Infrastructure.Persistence.Repositories.UserRepository;
+using Wallet.Infrastructure.Persistence.Repositories.Users;
 using Wallet.IntegrationTests;
 
 public class UserRepositoryTests : IClassFixture<PostgresFixture>

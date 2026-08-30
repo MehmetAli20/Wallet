@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Wallet.Api.Contracts.Common;
 using Wallet.Api.Contracts.Expenses.Requests;
 using Wallet.Application.Expenses.CreateExpense;
 using Wallet.Application.Expenses.ReverseExpense;
@@ -20,7 +21,7 @@ namespace Wallet.Api.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<Guid>> Create(
+        public async Task<ActionResult<CreatedResponse>> Create(
             CreateExpenseRequest request,
             [FromHeader(Name = "Idempotency-Key")] string idempotencyKey,
             CancellationToken cancellationToken)
@@ -41,7 +42,7 @@ namespace Wallet.Api.Controllers
                 fixedShares,
                 idempotencyKey), cancellationToken);
 
-            return StatusCode(StatusCodes.Status201Created, id);
+            return StatusCode(StatusCodes.Status201Created, new CreatedResponse(id));
         }
 
         [HttpPost("{expenseId:guid}/reversal")]
@@ -58,7 +59,7 @@ namespace Wallet.Api.Controllers
         }
 
         [HttpPost("{expenseId:guid}/revisions")]
-        public async Task<ActionResult<Guid>> Revise(
+        public async Task<ActionResult<CreatedResponse>> Revise(
             Guid expenseId,
             ReviseExpenseRequest request,
             [FromHeader(Name = "Idempotency-Key")] string idempotencyKey,
@@ -79,7 +80,7 @@ namespace Wallet.Api.Controllers
                 fixedShares,
                 idempotencyKey), cancellationToken);
 
-            return StatusCode(StatusCodes.Status201Created, id);
+            return StatusCode(StatusCodes.Status201Created, new CreatedResponse(id));
         }
     }
 }

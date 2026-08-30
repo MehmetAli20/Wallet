@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Wallet.Api.Contracts.Common;
 using Wallet.Api.Contracts.Placeholders;
 using Wallet.Application.Groups.Placeholders;
 
@@ -31,14 +32,14 @@ namespace Wallet.Api.Controllers
 
         [AllowAnonymous]
         [HttpPost("claim")]
-        public async Task<ActionResult<Guid>> Claim(
+        public async Task<ActionResult<CreatedResponse>> Claim(
             ClaimPlaceholderRequest request,
             CancellationToken cancellationToken)
         {
             var id = await _sender.Send(new ClaimPlaceholderCommand(
                 request.Token, request.Username, request.Email, request.Password), cancellationToken);
 
-            return Ok(id);
+            return Ok(new CreatedResponse(id));
         }
     }
 }

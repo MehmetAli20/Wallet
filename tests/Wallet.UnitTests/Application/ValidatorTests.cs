@@ -6,6 +6,8 @@ using Wallet.Application.Groups.InviteToGroup;
 using Wallet.Application.Transfers.TransferMoney;
 using Wallet.Application.Users.Login;
 using Wallet.Application.Users.Register;
+using Wallet.Application.Invitations.AcceptInvitation;
+using Wallet.Application.Invitations.DeclineInvitation;
 
 namespace Wallet.UnitTests.Application
 {
@@ -207,5 +209,29 @@ namespace Wallet.UnitTests.Application
         public void Register_PasswordAtBcryptLimit_Passes() =>
             IsValid(new RegisterCommandValidator(), ValidRegister() with { Password = new string('a', 72) })
                 .Should().BeTrue();
+
+        [Fact]
+        public void AcceptInvitation_ValidCommand_Passes() =>
+            new AcceptInvitationCommandValidator()
+                .Validate(new AcceptInvitationCommand(Guid.NewGuid()))
+                .IsValid.Should().BeTrue();
+
+        [Fact]
+        public void AcceptInvitation_EmptyId_Fails() =>
+            new AcceptInvitationCommandValidator()
+                .Validate(new AcceptInvitationCommand(Guid.Empty))
+                .IsValid.Should().BeFalse();
+
+        [Fact]
+        public void DeclineInvitation_ValidCommand_Passes() =>
+            new DeclineInvitationCommandValidator()
+                .Validate(new DeclineInvitationCommand(Guid.NewGuid()))
+                .IsValid.Should().BeTrue();
+
+        [Fact]
+        public void DeclineInvitation_EmptyId_Fails() =>
+            new DeclineInvitationCommandValidator()
+                .Validate(new DeclineInvitationCommand(Guid.Empty))
+                .IsValid.Should().BeFalse();
     }
 }

@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Wallet.Application.Abstractions.Users;
 using Wallet.Domain.Users;
 
-namespace Wallet.Infrastructure.Persistence.Repositories
+namespace Wallet.Infrastructure.Persistence.Repositories.Users
 {
     public class PlaceholderClaimRepository : IPlaceholderClaimRepository
     {

@@ -9,7 +9,9 @@ using Wallet.Domain.Groups;
 
 namespace Wallet.Application.Groups.EnsurePair
 {
-    public record EnsurePairCommand(Guid OtherUserId, string Currency) : IRequest<Guid>;
+    public record PairResult(Guid GroupId, bool Created);
+
+    public record EnsurePairCommand(Guid OtherUserId, string Currency) : IRequest<PairResult>;
 
     public class EnsurePairCommandValidator : AbstractValidator<EnsurePairCommand>
     {
@@ -20,7 +22,7 @@ namespace Wallet.Application.Groups.EnsurePair
         }
     }
 
-    public class EnsurePairCommandHandler : IRequestHandler<EnsurePairCommand, Guid>
+    public class EnsurePairCommandHandler : IRequestHandler<EnsurePairCommand, PairResult>
     {
         private readonly IGroupRepository _groups;
         private readonly IUserRepository _users;
@@ -39,7 +41,7 @@ namespace Wallet.Application.Groups.EnsurePair
             _currentUser = currentUser;
         }
 
-        public async Task<Guid> Handle(EnsurePairCommand request, CancellationToken cancellationToken)
+        public async Task<PairResult> Handle(EnsurePairCommand request, CancellationToken cancellationToken)
         {
             if (request.OtherUserId == _currentUser.UserId)
                 throw new InvalidGroupOperationException("A pair needs two different people.");
@@ -53,7 +55,7 @@ namespace Wallet.Application.Groups.EnsurePair
                 _currentUser.UserId, request.OtherUserId, currency, cancellationToken);
 
             if (existing is not null)
-                return existing.Id;
+                return new PairResult(existing.Id, Created: false);
 
             var pair = Group.CreatePair(
                 Guid.NewGuid(), currency, _currentUser.UserId, request.OtherUserId);
@@ -61,7 +63,7 @@ namespace Wallet.Application.Groups.EnsurePair
             await _groups.AddAsync(pair, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            return pair.Id;
+            return new PairResult(pair.Id, Created: true);
         }
     }
 }

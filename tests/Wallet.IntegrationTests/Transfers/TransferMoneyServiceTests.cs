@@ -10,10 +10,10 @@ using Wallet.Domain.Groups;
 using Wallet.Domain.Transfers;
 using Wallet.Domain.Users;
 using Wallet.Infrastructure.Persistence;
-using Wallet.Infrastructure.Persistence.Repositories;
-using AccountRepo = Wallet.Infrastructure.Persistence.Repositories.AccountRepository.AccountRepository;
-using GroupRepo = Wallet.Infrastructure.Persistence.Repositories.GroupRepository.GroupRepository;
-using UserRepo = Wallet.Infrastructure.Persistence.Repositories.UserRepository.UserRepository;
+using Wallet.Infrastructure.Persistence.Repositories.Settlements;
+using Wallet.Infrastructure.Persistence.Repositories.Groups;
+using Wallet.Infrastructure.Persistence.Repositories.Accounts;
+using Wallet.Infrastructure.Persistence.Repositories.Users;
 
 namespace Wallet.IntegrationTests.Transfers
 {
@@ -27,18 +27,18 @@ namespace Wallet.IntegrationTests.Transfers
         }
 
         private TransferMoneyCommandHandler CreateHandler(WalletDbContext context, Guid senderId) =>
-            new(new AccountRepo(context),
-                new GroupRepo(context),
+            new(new AccountRepository(context),
+                new GroupRepository(context),
                 new UnitOfWork(context),
                 new TransferService(),
                 new SettlementRepository(context),
                 TestCurrentUser.For(senderId),
-                new UserRepo(context));
+                new UserRepository(context));
 
         private async Task SeedUserAsync(Guid userId)
         {
             await using var context = _fixture.CreateContext(TestCurrentUser.System);
-            await new UserRepo(context).AddAsync(
+            await new UserRepository(context).AddAsync(
                 new User(userId, $"u{userId:N}", $"{userId:N}@test.com", "hash", UserRole.User));
             await new UnitOfWork(context).SaveChangesAsync();
         }
@@ -59,7 +59,7 @@ namespace Wallet.IntegrationTests.Transfers
                 group.Accept(member);
             }
 
-            await new GroupRepo(context).AddAsync(group);
+            await new GroupRepository(context).AddAsync(group);
             await new UnitOfWork(context).SaveChangesAsync();
 
             return groupId;
@@ -70,7 +70,7 @@ namespace Wallet.IntegrationTests.Transfers
             var accountId = Guid.NewGuid();
 
             await using var context = _fixture.CreateContext(TestCurrentUser.System);
-            await new AccountRepo(context).AddAsync(new Account(accountId, ownerId, currency));
+            await new AccountRepository(context).AddAsync(new Account(accountId, ownerId, currency));
             await new UnitOfWork(context).SaveChangesAsync();
 
             return accountId;
@@ -94,7 +94,7 @@ namespace Wallet.IntegrationTests.Transfers
 
             await using (var context = _fixture.CreateContext(TestCurrentUser.System))
             {
-                var repository = new AccountRepo(context);
+                var repository = new AccountRepository(context);
 
                 var source = await repository.GetByOwnerAndCurrencyAsync(sender, "USD");
                 var destination = await repository.GetByOwnerAndCurrencyAsync(recipient, "USD");
@@ -128,7 +128,7 @@ namespace Wallet.IntegrationTests.Transfers
 
             await using (var context = _fixture.CreateContext(TestCurrentUser.System))
             {
-                var repository = new AccountRepo(context);
+                var repository = new AccountRepository(context);
 
                 (await repository.GetByOwnerAndCurrencyAsync(sender, "EUR")).Should().NotBeNull();
                 (await repository.GetByOwnerAndCurrencyAsync(recipient, "EUR")).Should().NotBeNull();
@@ -232,7 +232,7 @@ namespace Wallet.IntegrationTests.Transfers
 
             await using (var context = _fixture.CreateContext(TestCurrentUser.System))
             {
-                var repository = new AccountRepo(context);
+                var repository = new AccountRepository(context);
                 var source = await repository.GetByIdAsync(sourceId);
                 var destination = await repository.GetByIdAsync(destinationId);
 
@@ -248,7 +248,7 @@ namespace Wallet.IntegrationTests.Transfers
 
             await using (var context = _fixture.CreateContext(TestCurrentUser.System))
             {
-                var repository = new AccountRepo(context);
+                var repository = new AccountRepository(context);
                 var source = await repository.GetByIdAsync(sourceId);
                 var destination = await repository.GetByIdAsync(destinationId);
 
@@ -269,8 +269,8 @@ namespace Wallet.IntegrationTests.Transfers
             await using var contextA = _fixture.CreateContext(TestCurrentUser.System);
             await using var contextB = _fixture.CreateContext(TestCurrentUser.System);
 
-            var repositoryA = new AccountRepo(contextA);
-            var repositoryB = new AccountRepo(contextB);
+            var repositoryA = new AccountRepository(contextA);
+            var repositoryB = new AccountRepository(contextB);
 
             var sourceA = await repositoryA.GetByIdAsync(sourceId);
             var destinationA = await repositoryA.GetByIdAsync(destinationId);
@@ -288,8 +288,8 @@ namespace Wallet.IntegrationTests.Transfers
             await act.Should().ThrowAsync<ConcurrencyConflictException>();
 
             await using var verifyContext = _fixture.CreateContext(TestCurrentUser.System);
-            var finalSource = await new AccountRepo(verifyContext).GetByIdAsync(sourceId);
-            var finalDestination = await new AccountRepo(verifyContext).GetByIdAsync(destinationId);
+            var finalSource = await new AccountRepository(verifyContext).GetByIdAsync(sourceId);
+            var finalDestination = await new AccountRepository(verifyContext).GetByIdAsync(destinationId);
 
             var totalAfter = finalSource!.Balance.Amount + finalDestination!.Balance.Amount;
 

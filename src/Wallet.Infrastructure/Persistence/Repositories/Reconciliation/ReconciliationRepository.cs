@@ -3,7 +3,7 @@ using Wallet.Application.Abstractions;
 using Wallet.Domain.Accounts;
 using Wallet.Domain.Reconciliation;
 
-namespace Wallet.Infrastructure.Persistence.Repositories
+namespace Wallet.Infrastructure.Persistence.Repositories.Reconciliation
 {
     public class ReconciliationRepository : IReconciliationRepository
     {

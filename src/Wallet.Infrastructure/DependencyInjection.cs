@@ -14,11 +14,13 @@ using Wallet.Application.Abstractions.Users;
 using Wallet.Infrastructure.Authentication;
 using Wallet.Infrastructure.Persistence;
 using Wallet.Infrastructure.Persistence.Idempotency;
-using Wallet.Infrastructure.Persistence.Repositories;
-using Wallet.Infrastructure.Persistence.Repositories.AccountRepository;
-using Wallet.Infrastructure.Persistence.Repositories.ExpenseRepository;
-using Wallet.Infrastructure.Persistence.Repositories.GroupRepository;
-using Wallet.Infrastructure.Persistence.Repositories.UserRepository;
+using Wallet.Infrastructure.Persistence.Repositories.Activity;
+using Wallet.Infrastructure.Persistence.Repositories.Reconciliation;
+using Wallet.Infrastructure.Persistence.Repositories.Settlements;
+using Wallet.Infrastructure.Persistence.Repositories.Accounts;
+using Wallet.Infrastructure.Persistence.Repositories.Expenses;
+using Wallet.Infrastructure.Persistence.Repositories.Groups;
+using Wallet.Infrastructure.Persistence.Repositories.Users;
 
 namespace Wallet.Infrastructure
 {

@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Wallet.Application.Abstractions.Expenses;
 using Wallet.Domain.Expenses;
 
-namespace Wallet.Infrastructure.Persistence.Repositories
+namespace Wallet.Infrastructure.Persistence.Repositories.Expenses
 {
     public class RecurringExpenseRepository : IRecurringExpenseRepository
     {

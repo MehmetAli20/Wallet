@@ -2,8 +2,8 @@
 using Wallet.Application.Abstractions.Exceptions;
 using Wallet.Domain.Groups;
 using Wallet.Infrastructure.Persistence;
-using Wallet.Infrastructure.Persistence.Repositories.GroupRepository;
-using Wallet.Infrastructure.Persistence.Repositories.UserRepository;
+using Wallet.Infrastructure.Persistence.Repositories.Groups;
+using Wallet.Infrastructure.Persistence.Repositories.Users;
 using Wallet.Domain.Users;
 
 namespace Wallet.IntegrationTests.Persistence.Repositories
