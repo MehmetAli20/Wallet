@@ -35,6 +35,7 @@ namespace Wallet.Infrastructure
             services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
             services.AddScoped<IAccountRepository, AccountRepository>();
             services.AddScoped<IRecurringExpenseRepository, RecurringExpenseRepository>();
+            services.AddScoped<IPlaceholderClaimRepository, PlaceholderClaimRepository>();
             services.AddScoped<ISettlementRepository, SettlementRepository>();
             services.AddScoped<IActivityRepository, ActivityRepository>();
             services.AddScoped<IExpenseRepository, ExpenseRepository>();

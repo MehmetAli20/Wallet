@@ -11,7 +11,9 @@ namespace Wallet.Domain.Activity
         MemberInvited = 5,
         MemberJoined = 6,
         InvitationDeclined = 7,
-        MemberRemoved = 8
+        MemberRemoved = 8,
+        PlaceholderAdded = 9,
+        PlaceholderClaimed = 10
     }
 
     public record ExpenseCreated(
@@ -56,6 +58,17 @@ namespace Wallet.Domain.Activity
         DateTimeOffset OccurredAt) : IDomainEvent;
 
     public record InvitationDeclined(
+        Guid GroupId,
+        Guid UserId,
+        DateTimeOffset OccurredAt) : IDomainEvent;
+
+    public record PlaceholderAdded(
+        Guid GroupId,
+        Guid PlaceholderUserId,
+        Guid AddedBy,
+        DateTimeOffset OccurredAt) : IDomainEvent;
+
+    public record PlaceholderClaimed(
         Guid GroupId,
         Guid UserId,
         DateTimeOffset OccurredAt) : IDomainEvent;

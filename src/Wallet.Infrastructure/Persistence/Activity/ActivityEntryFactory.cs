@@ -32,6 +32,14 @@ namespace Wallet.Infrastructure.Persistence.Activity
                 Guid.NewGuid(), e.GroupId, e.UserId, ActivityType.InvitationDeclined,
                 e.OccurredAt, e.UserId),
 
+            PlaceholderAdded e => new ActivityEntry(
+                Guid.NewGuid(), e.GroupId, e.AddedBy, ActivityType.PlaceholderAdded,
+                e.OccurredAt, e.PlaceholderUserId),
+
+            PlaceholderClaimed e => new ActivityEntry(
+                Guid.NewGuid(), e.GroupId, e.UserId, ActivityType.PlaceholderClaimed,
+                e.OccurredAt, e.UserId),
+
             MemberRemoved e => new ActivityEntry(
                 Guid.NewGuid(), e.GroupId, e.RemovedBy, ActivityType.MemberRemoved,
                 e.OccurredAt, e.UserId),

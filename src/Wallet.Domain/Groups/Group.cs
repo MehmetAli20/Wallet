@@ -104,6 +104,38 @@ namespace Wallet.Domain.Groups
             return member;
         }
 
+        public GroupMember AddPlaceholder(Guid userId, Guid addedBy)
+        {
+            if (Kind == GroupKind.Pair)
+                throw new InvalidGroupOperationException("A pair cannot take a third member.");
+
+            if (userId == Guid.Empty)
+                throw new ArgumentException("User Id cannot be empty.", nameof(userId));
+
+            if (!IsActiveMember(addedBy))
+                throw new InvalidGroupOperationException("Only an active member can add a placeholder.");
+
+            if (_members.Any(m => m.UserId == userId))
+                throw new InvalidGroupOperationException("User is already in the group.");
+
+            var member = new GroupMember(
+                Guid.NewGuid(), Id, userId, GroupMemberRole.Member, GroupMemberStatus.Active, addedBy);
+
+            _members.Add(member);
+
+            Raise(new PlaceholderAdded(Id, userId, addedBy, DateTimeOffset.UtcNow));
+
+            return member;
+        }
+
+        public void RecordPlaceholderClaimed(Guid userId)
+        {
+            if (!IsActiveMember(userId))
+                throw new InvalidGroupOperationException("User is not an active member.");
+
+            Raise(new PlaceholderClaimed(Id, userId, DateTimeOffset.UtcNow));
+        }
+
         public void DeclineInvitation(Guid userId)
         {
             var member = _members.SingleOrDefault(m => m.UserId == userId)

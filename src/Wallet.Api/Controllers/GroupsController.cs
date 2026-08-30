@@ -9,7 +9,9 @@ using Wallet.Application.Activity.GetGroupActivity;
 using Wallet.Application.Activity.GetUnreadActivity;
 using Wallet.Application.Activity.MarkActivitySeen;
 using Wallet.Application.Groups.CreateGroup;
+using Wallet.Api.Contracts.Placeholders;
 using Wallet.Application.Groups.EnsurePair;
+using Wallet.Application.Groups.Placeholders;
 using Wallet.Application.Groups.GetGroupBalance;
 using Wallet.Application.Groups.GetMyGroups;
 using Wallet.Application.Groups.InviteToGroup;
@@ -57,6 +59,18 @@ namespace Wallet.Api.Controllers
         {
             await _sender.Send(new InviteToGroupCommand(groupId, request.UserId), cancellationToken);
             return NoContent();
+        }
+
+        [HttpPost("{groupId:guid}/placeholders")]
+        public async Task<ActionResult<Guid>> AddPlaceholder(
+            Guid groupId,
+            AddPlaceholderRequest request,
+            CancellationToken cancellationToken)
+        {
+            var id = await _sender.Send(
+                new AddPlaceholderCommand(groupId, request.DisplayName), cancellationToken);
+
+            return StatusCode(StatusCodes.Status201Created, id);
         }
 
         [HttpGet("{groupId:guid}/balance")]

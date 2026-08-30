@@ -13,19 +13,19 @@ namespace Wallet.Infrastructure.Persistence.Configurations
         {
             builder.ToTable("Users");
             builder.HasKey(x => x.Id);
-            builder.Property(x => x.Username)
+            builder.Property(x => x.DisplayName)
                 .IsRequired()
+                .HasMaxLength(100);
+            builder.Property(x => x.Username)
                 .HasMaxLength(50);
             builder.HasIndex(x => x.Username)
                 .IsUnique();
             builder.Property(x => x.PasswordHash)
-                .IsRequired()
                 .HasMaxLength(100);
             builder.Property(x => x.Role)
                 .HasConversion<string>()
                 .HasMaxLength(20);
             builder.Property(e => e.Email)
-                .IsRequired()
                 .HasMaxLength(254);
             builder.HasIndex(e => e.Email)
                 .IsUnique();

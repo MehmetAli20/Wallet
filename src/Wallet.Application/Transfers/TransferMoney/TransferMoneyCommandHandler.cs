@@ -20,6 +20,7 @@ namespace Wallet.Application.Transfers.TransferMoney
         private readonly TransferService _transferService;
         private readonly ISettlementRepository _settlements;
         private readonly ICurrentUser _currentUser;
+        private readonly IUserRepository _users;
 
         public TransferMoneyCommandHandler(
             IAccountRepository accounts,
@@ -27,7 +28,8 @@ namespace Wallet.Application.Transfers.TransferMoney
             IUnitOfWork unitOfWork,
             TransferService transferService,
             ISettlementRepository settlements,
-            ICurrentUser currentUser)
+            ICurrentUser currentUser,
+            IUserRepository users)
         {
             _accounts = accounts;
             _groups = groups;
@@ -35,26 +37,45 @@ namespace Wallet.Application.Transfers.TransferMoney
             _transferService = transferService;
             _settlements = settlements;
             _currentUser = currentUser;
+            _users = users;
         }
 
         public async Task Handle(TransferMoneyCommand request, CancellationToken cancellationToken)
         {
-            if (request.RecipientUserId == _currentUser.UserId)
-                throw new InvalidTransferException("Cannot transfer to yourself.");
-
             var group = await _groups.GetByIdAsync(request.GroupId, cancellationToken)
                 ?? throw new GroupNotFoundException(request.GroupId);
+
+            var payerId = _currentUser.UserId;
+
+            if (request.OnBehalfOfUserId is { } onBehalfOf)
+            {
+                var party = await _users.GetByIdAsync(onBehalfOf, cancellationToken)
+                    ?? throw new InvalidTransferException("Payer not found.");
+
+                if (!party.IsPlaceholder)
+                    throw new InvalidTransferException(
+                        "A settlement can only be recorded on behalf of a placeholder.");
+
+                if (!group.IsActiveMember(onBehalfOf))
+                    throw new InvalidTransferException(
+                        "The payer is not an active member of this group.");
+
+                payerId = onBehalfOf;
+            }
+
+            if (request.RecipientUserId == payerId)
+                throw new InvalidTransferException("Cannot transfer to yourself.");
 
             if (!group.IsActiveMember(request.RecipientUserId))
                 throw new InvalidTransferException("The recipient is not an active member of this group.");
 
-            var payer = await ResolveAccountAsync(_currentUser.UserId, group.Currency, cancellationToken);
+            var payer = await ResolveAccountAsync(payerId, group.Currency, cancellationToken);
             var payee = await ResolveAccountAsync(request.RecipientUserId, group.Currency, cancellationToken);
 
             _transferService.Settle(payer, payee, new Money(request.Amount, group.Currency), group.Id);
 
             var settlement = Settlement.Record(
-                Guid.NewGuid(), group, _currentUser.UserId, request.RecipientUserId,
+                Guid.NewGuid(), group, payerId, request.RecipientUserId,
                 request.Amount, DateTimeOffset.UtcNow);
 
             await _settlements.AddAsync(settlement, cancellationToken);

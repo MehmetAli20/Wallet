@@ -7,6 +7,8 @@ using Wallet.Api.Contracts.Expenses.Requests;
 using Wallet.Api.Contracts.Groups.Requests;
 using Wallet.Api.Contracts.Groups.Responses;
 using Wallet.Api.Contracts.Invitations.Responses;
+using Wallet.Api.Contracts.Placeholders;
+using Wallet.Api.Contracts.Users;
 using Wallet.Api.Contracts.Transfers;
 
 namespace Wallet.IntegrationTests.Api
@@ -700,6 +702,133 @@ namespace Wallet.IntegrationTests.Api
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
 
+        [Fact]
+        public async Task AnExpenseWithAPlaceholder_SplitsLikeAnyOtherMember()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+            var payer = members[0];
+
+            var mehmet = await AddPlaceholderAsync(payer, groupId, "Mehmet");
+
+            var response = await PostExpenseAsync(payer, new CreateExpenseRequest(
+                groupId, payer.Id, 90m, "Market", DateTimeOffset.UtcNow,
+                new List<ExpenseParticipantRequest>
+                {
+                    new(payer.Id, null),
+                    new(members[1].Id, null),
+                    new(mehmet, null)
+                }));
+
+            response.StatusCode.Should().Be(HttpStatusCode.Created);
+
+            var balance = await BalanceAsync(payer, groupId);
+
+            Net(balance, payer.Id).Should().Be(60m);
+            Net(balance, mehmet).Should().Be(-30m);
+            balance.Positions.Sum(pos => pos.Net).Should().Be(0m);
+        }
+
+        [Fact]
+        public async Task ASecondPlaceholderWithTheSameName_IsRejected()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+
+            await AddPlaceholderAsync(members[0], groupId, "Mehmet");
+
+            var response = await members[0].Client.PostAsJsonAsync(
+                $"/api/groups/{groupId}/placeholders", new AddPlaceholderRequest("  mehmet "));
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        [Fact]
+        public async Task SettlingOnBehalfOfAPlaceholder_ClearsTheirDebt()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+            var payer = members[0];
+
+            var mehmet = await AddPlaceholderAsync(payer, groupId, "Mehmet");
+
+            await PostExpenseAsync(payer, new CreateExpenseRequest(
+                groupId, payer.Id, 60m, "Market", DateTimeOffset.UtcNow,
+                new List<ExpenseParticipantRequest> { new(payer.Id, null), new(mehmet, null) }));
+
+            var settle = await SettleAsync(payer, groupId, payer, 30m, onBehalfOf: mehmet);
+            settle.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            var after = await BalanceAsync(payer, groupId);
+
+            Net(after, mehmet).Should().Be(0m);
+            Net(after, payer.Id).Should().Be(0m);
+        }
+
+        [Fact]
+        public async Task SettlingOnBehalfOfARealUser_IsRejected()
+        {
+            var (groupId, members) = await GroupOfAsync(3);
+            var payer = members[0];
+            var debtor = members[1];
+
+            await CreateExpenseAsync(payer, groupId, 90m, members);
+
+            var response = await SettleAsync(payer, groupId, payer, 30m, onBehalfOf: debtor.Id);
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+            var after = await BalanceAsync(payer, groupId);
+            Net(after, debtor.Id).Should().Be(-30m);
+        }
+
+        [Fact]
+        public async Task ClaimingAPlaceholder_KeepsTheHistory_AndLetsThemSignIn()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+            var payer = members[0];
+
+            var mehmet = await AddPlaceholderAsync(payer, groupId, "Mehmet");
+
+            await PostExpenseAsync(payer, new CreateExpenseRequest(
+                groupId, payer.Id, 60m, "Market", DateTimeOffset.UtcNow,
+                new List<ExpenseParticipantRequest> { new(payer.Id, null), new(mehmet, null) }));
+
+            var token = await IssueClaimTokenAsync(payer, mehmet);
+
+            var username = $"u{Guid.NewGuid():N}"[..20];
+            var claimed = await ClaimAsync(token, username, $"{username}@test.com", "password123");
+
+            claimed.Should().Be(mehmet);
+
+            var client = _fixture.CreateClient();
+            var login = await client.PostAsJsonAsync(
+                "/api/auth/login", new LoginRequest(username, "password123"));
+
+            login.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var balance = await BalanceAsync(payer, groupId);
+
+            Net(balance, mehmet).Should().Be(-30m);
+            Net(balance, payer.Id).Should().Be(30m);
+        }
+
+        [Fact]
+        public async Task AClaimTokenWorksOnlyOnce()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+
+            var mehmet = await AddPlaceholderAsync(members[0], groupId, "Mehmet");
+            var token = await IssueClaimTokenAsync(members[0], mehmet);
+
+            var first = $"u{Guid.NewGuid():N}"[..20];
+            await ClaimAsync(token, first, $"{first}@test.com", "password123");
+
+            var second = $"u{Guid.NewGuid():N}"[..20];
+            var response = await _fixture.CreateClient().PostAsJsonAsync(
+                "/api/placeholders/claim",
+                new ClaimPlaceholderRequest(token, second, $"{second}@test.com", "password123"));
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
         private static async Task<Guid> CreateGroupAsync(TestUser owner, string currency = "TRY")
         {
             var created = await owner.Client.PostAsJsonAsync(
@@ -761,6 +890,38 @@ namespace Wallet.IntegrationTests.Api
             message.Headers.Add("Idempotency-Key", idempotencyKey ?? Guid.NewGuid().ToString());
 
             return await sender.Client.SendAsync(message);
+        }
+
+        private static async Task<Guid> AddPlaceholderAsync(
+            TestUser member, Guid groupId, string displayName)
+        {
+            var response = await member.Client.PostAsJsonAsync(
+                $"/api/groups/{groupId}/placeholders", new AddPlaceholderRequest(displayName));
+
+            response.StatusCode.Should().Be(HttpStatusCode.Created);
+
+            return await response.Content.ReadFromJsonAsync<Guid>();
+        }
+
+        private static async Task<string> IssueClaimTokenAsync(TestUser member, Guid placeholderId)
+        {
+            var response = await member.Client.PostAsync(
+                $"/api/placeholders/{placeholderId}/claim-token", null);
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            return (await response.Content.ReadFromJsonAsync<ClaimTokenResponse>())!.Token;
+        }
+
+        private async Task<Guid> ClaimAsync(string token, string username, string email, string password)
+        {
+            var response = await _fixture.CreateClient().PostAsJsonAsync(
+                "/api/placeholders/claim",
+                new ClaimPlaceholderRequest(token, username, email, password));
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            return await response.Content.ReadFromJsonAsync<Guid>();
         }
 
         private static async Task<Guid> EnsurePairAsync(
@@ -862,11 +1023,13 @@ namespace Wallet.IntegrationTests.Api
         }
 
         private static async Task<HttpResponseMessage> SettleAsync(
-            TestUser payer, Guid groupId, TestUser payee, decimal amount, string? idempotencyKey = null)
+            TestUser payer, Guid groupId, TestUser payee, decimal amount,
+            string? idempotencyKey = null, Guid? onBehalfOf = null)
         {
             using var message = new HttpRequestMessage(HttpMethod.Post, "/api/transfers")
             {
-                Content = JsonContent.Create(new TransferRequest(groupId, payee.Id, amount))
+                Content = JsonContent.Create(
+                    new TransferRequest(groupId, payee.Id, amount, onBehalfOf))
             };
             message.Headers.Add("Idempotency-Key", idempotencyKey ?? Guid.NewGuid().ToString());
 

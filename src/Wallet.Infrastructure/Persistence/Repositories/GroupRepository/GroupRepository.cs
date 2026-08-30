@@ -39,6 +39,15 @@ namespace Wallet.Infrastructure.Persistence.Repositories.GroupRepository
                 .ToListAsync(cancellationToken);
         }
 
+        public async Task<IReadOnlyList<Group>> GetAllForPartyAsync(Guid partyId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Groups
+                .IgnoreQueryFilters()
+                .Include(g => g.Members)
+                .Where(g => g.Members.Any(m => m.UserId == partyId))
+                .ToListAsync(cancellationToken);
+        }
+
         public async Task AddAsync(Group group, CancellationToken cancellationToken = default)
         {
             await _context.Groups.AddAsync(group, cancellationToken);

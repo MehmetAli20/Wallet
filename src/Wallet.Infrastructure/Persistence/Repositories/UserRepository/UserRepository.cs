@@ -16,6 +16,29 @@ namespace Wallet.Infrastructure.Persistence.Repositories.UserRepository
             _context = context;
         }
 
+        public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            return await _context.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+        }
+
+        public async Task<User?> GetPlaceholderInMyGroupsAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            return await _context.Users
+                .Where(u => u.Id == id && u.IsPlaceholder)
+                .Where(u => _context.Groups.Any(g => g.Members.Any(m => m.UserId == u.Id)))
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        public async Task<bool> DisplayNameTakenInGroupAsync(
+            Guid groupId, string displayName, CancellationToken cancellationToken = default)
+        {
+            var normalized = displayName.Trim().ToLower();
+
+            return await _context.Users
+                .Where(u => _context.Groups.Any(g => g.Id == groupId && g.Members.Any(m => m.UserId == u.Id)))
+                .AnyAsync(u => u.DisplayName.ToLower() == normalized, cancellationToken);
+        }
+
         public async Task<User?> GetByUsernameAsync(string username, CancellationToken cancellationToken = default)
         {
             var normalizedUsername = User.NormalizeUsername(username);

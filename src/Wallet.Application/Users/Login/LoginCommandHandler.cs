@@ -31,10 +31,12 @@ namespace Wallet.Application.Users.Login
         {
             var user = await _userRepository.GetByUsernameAsync(request.Username, cancellationToken);
 
-            var passwordHash = user?.PasswordHash ?? _passwordHasher.DummyHash;
+            var canSignIn = user is not null && !user.IsPlaceholder;
+
+            var passwordHash = canSignIn ? user!.PasswordHash! : _passwordHasher.DummyHash;
             var passwordIsValid = _passwordHasher.Verify(request.Password, passwordHash);
 
-            if (user is null || !passwordIsValid)
+            if (!canSignIn || !passwordIsValid)
             {
                 _logger.LogWarning("Failed login attempt for username {Username}.", request.Username);
 
