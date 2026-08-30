@@ -6,6 +6,7 @@ using Wallet.Api.Contracts.Accounts.Responses;
 using Wallet.Application.Abstractions;
 using Wallet.Application.Abstractions.Accounts;
 using Wallet.Application.Accounts.GetAccountById;
+using Wallet.Application.Accounts.GetAccountEntries;
 using Wallet.Application.Accounts.GetMyAccounts;
 using Wallet.Domain.Accounts;
 using Wallet.Domain.Common;
@@ -14,7 +15,7 @@ namespace Wallet.Api.Controllers
 {
     
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/v1/[controller]")]
     public class AccountsController : ControllerBase
     {
         private readonly ISender _sender;
@@ -33,6 +34,21 @@ namespace Wallet.Api.Controllers
                 return NotFound();
             }
             return account.ToResponse();
+        }
+
+        [HttpGet("{accountId:guid}/entries")]
+        public async Task<ActionResult<IReadOnlyList<LedgerEntryResponse>>> GetEntries(
+            Guid accountId,
+            [FromQuery] int skip,
+            [FromQuery] int take,
+            CancellationToken cancellationToken)
+        {
+            var entries = await _sender.Send(new GetAccountEntriesQuery(
+                accountId,
+                skip < 0 ? 0 : skip,
+                take <= 0 ? 50 : Math.Min(take, 200)), cancellationToken);
+
+            return Ok(entries.Select(entry => entry.ToResponse()).ToList());
         }
 
         [HttpGet]

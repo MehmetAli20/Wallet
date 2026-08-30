@@ -8,8 +8,7 @@ namespace Wallet.Api.Contracts.Accounts
         public static AccountResponse ToResponse(this Account account) =>
             new AccountResponse(account.Id,
                                 account.Balance.Amount,
-                                account.Balance.Currency,
-                                account.Entries.Select(entry => entry.ToResponse()).ToList());
+                                account.Balance.Currency);
 
         public static LedgerEntryResponse ToResponse(this LedgerEntry entry) =>
             new(

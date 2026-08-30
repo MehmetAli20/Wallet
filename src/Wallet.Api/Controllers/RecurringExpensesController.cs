@@ -8,7 +8,7 @@ using Wallet.Application.Expenses.Recurring;
 
 namespace Wallet.Api.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/v1/[controller]")]
     [ApiController]
     public class RecurringExpensesController : ControllerBase
     {

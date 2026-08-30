@@ -19,8 +19,18 @@ namespace Wallet.Infrastructure.Persistence.Repositories.Accounts
         public async Task<Account?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
             return await _context.Accounts
-                .Include(a => a.Entries.OrderBy(e => e.Sequence))
                 .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
+        }
+
+        public async Task<IReadOnlyList<LedgerEntry>> GetEntriesAsync(
+            Guid accountId, int skip, int take, CancellationToken cancellationToken = default)
+        {
+            return await _context.Set<LedgerEntry>()
+                .Where(e => e.AccountId == accountId)
+                .OrderByDescending(e => e.Sequence)
+                .Skip(skip)
+                .Take(take)
+                .ToListAsync(cancellationToken);
         }
 
         public async Task AddAsync(Account account, CancellationToken cancellationToken = default)

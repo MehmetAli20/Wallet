@@ -18,7 +18,7 @@ namespace Wallet.IntegrationTests.Api
         {
             var client = _fixture.CreateClient();
 
-            var response = await client.GetAsync("/api/groups");
+            var response = await client.GetAsync("/api/v1/groups");
 
             response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         }
@@ -38,7 +38,7 @@ namespace Wallet.IntegrationTests.Api
         {
             var client = (await _fixture.RegisterAsync()).Client;
 
-            var response = await client.GetAsync("/api/groups");
+            var response = await client.GetAsync("/api/v1/groups");
 
             response.StatusCode.Should().Be(HttpStatusCode.OK);
         }
@@ -48,12 +48,12 @@ namespace Wallet.IntegrationTests.Api
         {
             var client = (await _fixture.RegisterAsync()).Client;
 
-            var created = await client.PostAsJsonAsync("/api/groups", new CreateGroupRequest("Piknik", "TRY"));
+            var created = await client.PostAsJsonAsync("/api/v1/groups", new CreateGroupRequest("Piknik", "TRY"));
             created.StatusCode.Should().Be(HttpStatusCode.Created);
 
             var groupId = (await created.Content.ReadFromJsonAsync<CreatedResponse>())!.Id;
 
-            var groups = await client.GetFromJsonAsync<List<GroupResponse>>("/api/groups");
+            var groups = await client.GetFromJsonAsync<List<GroupResponse>>("/api/v1/groups");
 
             groups.Should().ContainSingle(g => g.Id == groupId);
             groups!.Single(g => g.Id == groupId).Currency.Should().Be("TRY");
@@ -64,7 +64,7 @@ namespace Wallet.IntegrationTests.Api
         {
             var client = (await _fixture.RegisterAsync()).Client;
 
-            var response = await client.PostAsJsonAsync("/api/groups", new CreateGroupRequest("", "TRY"));
+            var response = await client.PostAsJsonAsync("/api/v1/groups", new CreateGroupRequest("", "TRY"));
 
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
@@ -74,10 +74,10 @@ namespace Wallet.IntegrationTests.Api
         {
             var client = (await _fixture.RegisterAsync()).Client;
 
-            var created = await client.PostAsJsonAsync("/api/groups", new CreateGroupRequest("Piknik", "TRY"));
+            var created = await client.PostAsJsonAsync("/api/v1/groups", new CreateGroupRequest("Piknik", "TRY"));
             var groupId = (await created.Content.ReadFromJsonAsync<CreatedResponse>())!.Id;
 
-            var balance = await client.GetFromJsonAsync<GroupBalanceResponse>($"/api/groups/{groupId}/balance");
+            var balance = await client.GetFromJsonAsync<GroupBalanceResponse>($"/api/v1/groups/{groupId}/balance");
 
             balance!.GroupId.Should().Be(groupId);
             balance.Currency.Should().Be("TRY");
@@ -89,7 +89,7 @@ namespace Wallet.IntegrationTests.Api
         {
             var client = (await _fixture.RegisterAsync()).Client;
 
-            var response = await client.GetAsync($"/api/groups/{Guid.NewGuid()}/balance");
+            var response = await client.GetAsync($"/api/v1/groups/{Guid.NewGuid()}/balance");
 
             response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         }

@@ -11,5 +11,6 @@ namespace Wallet.Application.Abstractions.Accounts
         Task AddAsync(Account account, CancellationToken cancellationToken = default);
         Task<IReadOnlyList<Account>> GetAllAsync(CancellationToken cancellationToken = default);
         Task<Account?> GetByOwnerAndCurrencyAsync(Guid ownerId, string currency, CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<LedgerEntry>> GetEntriesAsync(Guid accountId, int skip, int take, CancellationToken cancellationToken = default);
     }
 }

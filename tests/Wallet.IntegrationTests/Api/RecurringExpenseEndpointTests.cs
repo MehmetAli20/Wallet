@@ -32,7 +32,7 @@ namespace Wallet.IntegrationTests.Api
                 .Should().Be((await first.Content.ReadFromJsonAsync<CreatedResponse>())!.Id);
 
             var mine = await owner.Client.GetFromJsonAsync<List<RecurringExpenseResponse>>(
-                "/api/recurringexpenses");
+                "/api/v1/recurringexpenses");
 
             mine!.Where(r => r.GroupId == groupId).Should().ContainSingle();
         }
@@ -47,7 +47,7 @@ namespace Wallet.IntegrationTests.Api
             await PostAsync(owner, request, Guid.NewGuid().ToString());
 
             var mine = await owner.Client.GetFromJsonAsync<List<RecurringExpenseResponse>>(
-                "/api/recurringexpenses");
+                "/api/v1/recurringexpenses");
 
             mine!.Where(r => r.GroupId == groupId).Should().HaveCount(2);
         }
@@ -58,7 +58,7 @@ namespace Wallet.IntegrationTests.Api
             var (groupId, owner) = await GroupOfOneAsync();
 
             var response = await owner.Client.PostAsJsonAsync(
-                "/api/recurringexpenses", NewRequest(groupId, owner.Id));
+                "/api/v1/recurringexpenses", NewRequest(groupId, owner.Id));
 
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
@@ -73,11 +73,11 @@ namespace Wallet.IntegrationTests.Api
 
             var id = (await created.Content.ReadFromJsonAsync<CreatedResponse>())!.Id;
 
-            var cancelled = await owner.Client.DeleteAsync($"/api/recurringexpenses/{id}");
+            var cancelled = await owner.Client.DeleteAsync($"/api/v1/recurringexpenses/{id}");
             cancelled.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
             var mine = await owner.Client.GetFromJsonAsync<List<RecurringExpenseResponse>>(
-                "/api/recurringexpenses");
+                "/api/v1/recurringexpenses");
 
             mine!.Should().NotContain(r => r.Id == id);
         }
@@ -94,7 +94,7 @@ namespace Wallet.IntegrationTests.Api
         private static async Task<HttpResponseMessage> PostAsync(
             TestUser owner, CreateRecurringExpenseRequest request, string key)
         {
-            using var message = new HttpRequestMessage(HttpMethod.Post, "/api/recurringexpenses")
+            using var message = new HttpRequestMessage(HttpMethod.Post, "/api/v1/recurringexpenses")
             {
                 Content = JsonContent.Create(request)
             };
@@ -108,7 +108,7 @@ namespace Wallet.IntegrationTests.Api
             var owner = await _fixture.RegisterAsync();
 
             var created = await owner.Client.PostAsJsonAsync(
-                "/api/groups", new CreateGroupRequest("Ev", "TRY"));
+                "/api/v1/groups", new CreateGroupRequest("Ev", "TRY"));
 
             created.StatusCode.Should().Be(HttpStatusCode.Created);
 

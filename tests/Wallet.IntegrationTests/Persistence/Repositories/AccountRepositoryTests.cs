@@ -41,9 +41,12 @@ public class AccountRepositoryTests : IClassFixture<PostgresFixture>
 
             loaded.Should().NotBeNull();
             loaded!.Balance.Should().Be(new Money(30m, "USD"));
-            loaded.Entries.Should().HaveCount(2);
-            loaded.Entries[0].Type.Should().Be(LedgerEntryType.Credit);
-            loaded.Entries[1].Type.Should().Be(LedgerEntryType.Debit);
+
+            var entries = await repo.GetEntriesAsync(id, skip: 0, take: 50);
+
+            entries.Should().HaveCount(2);
+            entries[0].Type.Should().Be(LedgerEntryType.Debit);
+            entries[1].Type.Should().Be(LedgerEntryType.Credit);
         }
     }
 

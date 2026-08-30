@@ -9,7 +9,7 @@ using Wallet.Domain.Common;
 
 namespace Wallet.Api.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/v1/[controller]")]
     [ApiController]
     public class TransfersController : ControllerBase
     {

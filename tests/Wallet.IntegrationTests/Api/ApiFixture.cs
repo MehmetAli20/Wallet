@@ -48,12 +48,12 @@ namespace Wallet.IntegrationTests.Api
             var client = CreateClient();
             var username = $"u{Guid.NewGuid():N}"[..20];
 
-            var register = await client.PostAsJsonAsync("/api/auth/register",
+            var register = await client.PostAsJsonAsync("/api/v1/auth/register",
                 new RegisterRequest(username, $"{username}@test.com", "password123"));
             register.StatusCode.Should().Be(HttpStatusCode.Created);
             var userId = (await register.Content.ReadFromJsonAsync<RegisterResponse>())!.UserId;
 
-            var login = await client.PostAsJsonAsync("/api/auth/login",
+            var login = await client.PostAsJsonAsync("/api/v1/auth/login",
                 new LoginRequest(username, "password123"));
             login.StatusCode.Should().Be(HttpStatusCode.OK);
             var token = (await login.Content.ReadFromJsonAsync<LoginResponse>())!.Token;

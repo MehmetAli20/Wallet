@@ -15,11 +15,11 @@ using Wallet.Api.Contracts.Common;
 
 namespace Wallet.IntegrationTests.Api
 {
-    public class ExpenseFlowTests : IClassFixture<ApiFixture>
+    public class GroupFlowTests : IClassFixture<ApiFixture>
     {
         private readonly ApiFixture _fixture;
 
-        public ExpenseFlowTests(ApiFixture fixture) => _fixture = fixture;
+        public GroupFlowTests(ApiFixture fixture) => _fixture = fixture;
 
         [Fact]
         public async Task OneExpenseFiveWays_LeavesThePayerWhole_AndEveryoneElseOwingTheirShare()
@@ -169,7 +169,7 @@ namespace Wallet.IntegrationTests.Api
             var pending = await _fixture.RegisterAsync();
 
             var invite = await payer.Client.PostAsJsonAsync(
-                $"/api/groups/{groupId}/members", new InviteToGroupRequest(pending.Id));
+                $"/api/v1/groups/{groupId}/members", new InviteToGroupRequest(pending.Id));
             invite.StatusCode.Should().Be(HttpStatusCode.NoContent);   // invited, never accepted
 
             var response = await PostExpenseAsync(payer, new CreateExpenseRequest(
@@ -227,7 +227,7 @@ namespace Wallet.IntegrationTests.Api
             var (groupId, members) = await GroupOfAsync(3);
             var payer = members[0];
 
-            var response = await payer.Client.PostAsJsonAsync("/api/expenses", new CreateExpenseRequest(
+            var response = await payer.Client.PostAsJsonAsync("/api/v1/expenses", new CreateExpenseRequest(
                 groupId, payer.Id, 100m, "Market", DateTimeOffset.UtcNow, Participants(members)));
 
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -511,7 +511,7 @@ namespace Wallet.IntegrationTests.Api
             var (groupId, _) = await GroupOfAsync(2);
             var outsider = await _fixture.RegisterAsync();
 
-            var response = await outsider.Client.GetAsync($"/api/groups/{groupId}/activity");
+            var response = await outsider.Client.GetAsync($"/api/v1/groups/{groupId}/activity");
 
             response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         }
@@ -626,10 +626,10 @@ namespace Wallet.IntegrationTests.Api
             var bob = await _fixture.RegisterAsync();
 
             var first = await alice.Client.PostAsJsonAsync(
-                "/api/groups/pairs", new EnsurePairRequest(bob.Id, "TRY"));
+                "/api/v1/groups/pairs", new EnsurePairRequest(bob.Id, "TRY"));
 
             var second = await alice.Client.PostAsJsonAsync(
-                "/api/groups/pairs", new EnsurePairRequest(bob.Id, "TRY"));
+                "/api/v1/groups/pairs", new EnsurePairRequest(bob.Id, "TRY"));
 
             first.StatusCode.Should().Be(HttpStatusCode.Created);
             second.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -704,7 +704,7 @@ namespace Wallet.IntegrationTests.Api
             var pairId = await EnsurePairAsync(alice, bob);
 
             var response = await alice.Client.PostAsJsonAsync(
-                $"/api/groups/{pairId}/members", new InviteToGroupRequest(carol.Id));
+                $"/api/v1/groups/{pairId}/members", new InviteToGroupRequest(carol.Id));
 
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
@@ -715,7 +715,7 @@ namespace Wallet.IntegrationTests.Api
             var alice = await _fixture.RegisterAsync();
 
             var response = await alice.Client.PostAsJsonAsync(
-                "/api/groups/pairs", new EnsurePairRequest(alice.Id, "TRY"));
+                "/api/v1/groups/pairs", new EnsurePairRequest(alice.Id, "TRY"));
 
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
@@ -754,7 +754,7 @@ namespace Wallet.IntegrationTests.Api
             await AddPlaceholderAsync(members[0], groupId, "Mehmet");
 
             var response = await members[0].Client.PostAsJsonAsync(
-                $"/api/groups/{groupId}/placeholders", new AddPlaceholderRequest("  mehmet "));
+                $"/api/v1/groups/{groupId}/placeholders", new AddPlaceholderRequest("  mehmet "));
 
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
@@ -818,7 +818,7 @@ namespace Wallet.IntegrationTests.Api
 
             var client = _fixture.CreateClient();
             var login = await client.PostAsJsonAsync(
-                "/api/auth/login", new LoginRequest(username, "password123"));
+                "/api/v1/auth/login", new LoginRequest(username, "password123"));
 
             login.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -841,7 +841,7 @@ namespace Wallet.IntegrationTests.Api
 
             var second = $"u{Guid.NewGuid():N}"[..20];
             var response = await _fixture.CreateClient().PostAsJsonAsync(
-                "/api/placeholders/claim",
+                "/api/v1/placeholders/claim",
                 new ClaimPlaceholderRequest(token, second, $"{second}@test.com", "password123"));
 
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -944,7 +944,7 @@ namespace Wallet.IntegrationTests.Api
             var (groupId, _) = await GroupOfAsync(2);
             var outsider = await _fixture.RegisterAsync();
 
-            var response = await outsider.Client.GetAsync($"/api/groups/{groupId}/expenses");
+            var response = await outsider.Client.GetAsync($"/api/v1/groups/{groupId}/expenses");
 
             response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         }
@@ -952,7 +952,7 @@ namespace Wallet.IntegrationTests.Api
         private static async Task<Guid> CreateGroupAsync(TestUser owner, string currency = "TRY")
         {
             var created = await owner.Client.PostAsJsonAsync(
-                "/api/groups", new CreateGroupRequest("Piknik", currency));
+                "/api/v1/groups", new CreateGroupRequest("Piknik", currency));
             created.StatusCode.Should().Be(HttpStatusCode.Created);
 
             return (await created.Content.ReadFromJsonAsync<CreatedResponse>())!.Id;
@@ -961,13 +961,13 @@ namespace Wallet.IntegrationTests.Api
         private static async Task JoinAsync(TestUser inviter, Guid groupId, TestUser invitee)
         {
             var invite = await inviter.Client.PostAsJsonAsync(
-                $"/api/groups/{groupId}/members", new InviteToGroupRequest(invitee.Id));
+                $"/api/v1/groups/{groupId}/members", new InviteToGroupRequest(invitee.Id));
             invite.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
-            var invitations = await invitee.Client.GetFromJsonAsync<List<InvitationResponse>>("/api/invitations");
+            var invitations = await invitee.Client.GetFromJsonAsync<List<InvitationResponse>>("/api/v1/invitations");
             var invitation = invitations!.Single(i => i.GroupId == groupId);
 
-            var accept = await invitee.Client.PostAsync($"/api/invitations/{invitation.Id}/accept", null);
+            var accept = await invitee.Client.PostAsync($"/api/v1/invitations/{invitation.Id}/accept", null);
             accept.StatusCode.Should().Be(HttpStatusCode.NoContent);
         }
 
@@ -1003,7 +1003,7 @@ namespace Wallet.IntegrationTests.Api
         private static async Task<HttpResponseMessage> PostExpenseAsync(
             TestUser sender, CreateExpenseRequest request, string? idempotencyKey = null)
         {
-            using var message = new HttpRequestMessage(HttpMethod.Post, "/api/expenses")
+            using var message = new HttpRequestMessage(HttpMethod.Post, "/api/v1/expenses")
             {
                 Content = JsonContent.Create(request)
             };
@@ -1015,7 +1015,7 @@ namespace Wallet.IntegrationTests.Api
         private static async Task<List<ExpenseResponse>> ExpensesAsync(
             TestUser user, Guid groupId, bool includeReversed = false, int skip = 0, int take = 0)
         {
-            var url = $"/api/groups/{groupId}/expenses?includeReversed={includeReversed}";
+            var url = $"/api/v1/groups/{groupId}/expenses?includeReversed={includeReversed}";
 
             if (skip > 0)
                 url += $"&skip={skip}";
@@ -1032,7 +1032,7 @@ namespace Wallet.IntegrationTests.Api
             TestUser member, Guid groupId, string displayName)
         {
             var response = await member.Client.PostAsJsonAsync(
-                $"/api/groups/{groupId}/placeholders", new AddPlaceholderRequest(displayName));
+                $"/api/v1/groups/{groupId}/placeholders", new AddPlaceholderRequest(displayName));
 
             response.StatusCode.Should().Be(HttpStatusCode.Created);
 
@@ -1042,7 +1042,7 @@ namespace Wallet.IntegrationTests.Api
         private static async Task<string> IssueClaimTokenAsync(TestUser member, Guid placeholderId)
         {
             var response = await member.Client.PostAsync(
-                $"/api/placeholders/{placeholderId}/claim-token", null);
+                $"/api/v1/placeholders/{placeholderId}/claim-token", null);
 
             response.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -1052,7 +1052,7 @@ namespace Wallet.IntegrationTests.Api
         private async Task<Guid> ClaimAsync(string token, string username, string email, string password)
         {
             var response = await _fixture.CreateClient().PostAsJsonAsync(
-                "/api/placeholders/claim",
+                "/api/v1/placeholders/claim",
                 new ClaimPlaceholderRequest(token, username, email, password));
 
             response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -1064,7 +1064,7 @@ namespace Wallet.IntegrationTests.Api
             TestUser caller, TestUser other, string currency = "TRY")
         {
             var response = await caller.Client.PostAsJsonAsync(
-                "/api/groups/pairs", new EnsurePairRequest(other.Id, currency));
+                "/api/v1/groups/pairs", new EnsurePairRequest(other.Id, currency));
 
             response.StatusCode.Should().BeOneOf(HttpStatusCode.Created, HttpStatusCode.OK);
 
@@ -1081,7 +1081,7 @@ namespace Wallet.IntegrationTests.Api
         private static async Task<List<GroupUnreadCountResponse>> UnreadAsync(TestUser user)
         {
             var counts = await user.Client.GetFromJsonAsync<List<GroupUnreadCountResponse>>(
-                "/api/groups/activity/unread");
+                "/api/v1/groups/activity/unread");
 
             return counts!;
         }
@@ -1089,12 +1089,12 @@ namespace Wallet.IntegrationTests.Api
         private static async Task<HttpResponseMessage> MarkSeenAsync(
             TestUser user, Guid groupId, long sequence) =>
             await user.Client.PostAsJsonAsync(
-                $"/api/groups/{groupId}/activity/seen", new MarkActivitySeenRequest(sequence));
+                $"/api/v1/groups/{groupId}/activity/seen", new MarkActivitySeenRequest(sequence));
 
         private static async Task<List<ActivityEntryResponse>> ActivityAsync(
             TestUser user, Guid groupId, long? after = null)
         {
-            var url = $"/api/groups/{groupId}/activity";
+            var url = $"/api/v1/groups/{groupId}/activity";
 
             if (after is not null)
                 url += $"?after={after}";
@@ -1120,7 +1120,7 @@ namespace Wallet.IntegrationTests.Api
             TestUser actor, Guid expenseId, string? reason = null, string? idempotencyKey = null)
         {
             using var message = new HttpRequestMessage(
-                HttpMethod.Post, $"/api/expenses/{expenseId}/reversal")
+                HttpMethod.Post, $"/api/v1/expenses/{expenseId}/reversal")
             {
                 Content = JsonContent.Create(new ReverseExpenseRequest(reason))
             };
@@ -1133,7 +1133,7 @@ namespace Wallet.IntegrationTests.Api
             TestUser actor, Guid expenseId, ReviseExpenseRequest request, string? idempotencyKey = null)
         {
             using var message = new HttpRequestMessage(
-                HttpMethod.Post, $"/api/expenses/{expenseId}/revisions")
+                HttpMethod.Post, $"/api/v1/expenses/{expenseId}/revisions")
             {
                 Content = JsonContent.Create(request)
             };
@@ -1144,15 +1144,15 @@ namespace Wallet.IntegrationTests.Api
 
         private static async Task<int> LedgerEntryCountAsync(TestUser user)
         {
-            var accounts = await user.Client.GetFromJsonAsync<List<AccountListResponse>>("/api/accounts");
+            var accounts = await user.Client.GetFromJsonAsync<List<AccountListResponse>>("/api/v1/accounts");
             var total = 0;
 
             foreach (var account in accounts!)
             {
-                var detail = await user.Client.GetFromJsonAsync<AccountResponse>(
-                    $"/api/accounts/{account.Id}");
+                var entries = await user.Client.GetFromJsonAsync<List<LedgerEntryResponse>>(
+                    $"/api/v1/accounts/{account.Id}/entries?take=200");
 
-                total += detail!.Entries.Count;
+                total += entries!.Count;
             }
 
             return total;
@@ -1162,7 +1162,7 @@ namespace Wallet.IntegrationTests.Api
             TestUser payer, Guid groupId, TestUser payee, decimal amount,
             string? idempotencyKey = null, Guid? onBehalfOf = null)
         {
-            using var message = new HttpRequestMessage(HttpMethod.Post, "/api/transfers")
+            using var message = new HttpRequestMessage(HttpMethod.Post, "/api/v1/transfers")
             {
                 Content = JsonContent.Create(
                     new TransferRequest(groupId, payee.Id, amount, onBehalfOf))
@@ -1176,7 +1176,7 @@ namespace Wallet.IntegrationTests.Api
             TestUser user, Guid groupId, bool simplify = false)
         {
             var balance = await user.Client.GetFromJsonAsync<GroupBalanceResponse>(
-                $"/api/groups/{groupId}/balance?simplify={(simplify ? "true" : "false")}");
+                $"/api/v1/groups/{groupId}/balance?simplify={(simplify ? "true" : "false")}");
 
             return balance!;
         }
