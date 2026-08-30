@@ -12,7 +12,7 @@ public class IdempotencyBehaviorTests : IClassFixture<PostgresFixture>
     private readonly PostgresFixture _fixture;
     public IdempotencyBehaviorTests(PostgresFixture fixture) => _fixture = fixture;
 
-    private record FakeRequest(string IdempotencyKey) : IIdempotentRequest;
+    private record FakeRequest(string IdempotencyKey, decimal Amount = 0m) : IIdempotentRequest;
 
     private record OtherFakeRequest(string IdempotencyKey) : IIdempotentRequest;
 
@@ -73,7 +73,8 @@ public class IdempotencyBehaviorTests : IClassFixture<PostgresFixture>
 
         await using (var context = _fixture.CreateContext(TestCurrentUser.System))
         {
-            new IdempotencyStore(context, TestCurrentUser.System).Stage(key, nameof(FakeRequest));
+            new IdempotencyStore(context, TestCurrentUser.System)
+                .Stage(key, nameof(FakeRequest), requestHash: null);
             await new UnitOfWork(context).SaveChangesAsync();
         }
 
@@ -146,6 +147,57 @@ public class IdempotencyBehaviorTests : IClassFixture<PostgresFixture>
                 CancellationToken.None);
 
             await act.Should().ThrowAsync<IdempotencyKeyReuseException>();
+        }
+    }
+
+    [Fact]
+    public async Task TheSameKeyWithADifferentBody_IsRejected()
+    {
+        var key = $"key-{Guid.NewGuid()}";
+        var user = TestCurrentUser.For(Guid.NewGuid());
+
+        await using (var context = _fixture.CreateContext(user))
+        {
+            await CreateBehavior(context, user).Handle(
+                new FakeRequest(key, 100m),
+                _ => Task.FromResult(Guid.NewGuid()),
+                CancellationToken.None);
+        }
+
+        await using (var context = _fixture.CreateContext(user))
+        {
+            var act = async () => await CreateBehavior(context, user).Handle(
+                new FakeRequest(key, 250m),
+                _ => Task.FromResult(Guid.NewGuid()),
+                CancellationToken.None);
+
+            await act.Should().ThrowAsync<IdempotencyPayloadMismatchException>();
+        }
+    }
+
+    [Fact]
+    public async Task TheSameKeyWithTheSameBody_StillReplays()
+    {
+        var key = $"key-{Guid.NewGuid()}";
+        var user = TestCurrentUser.For(Guid.NewGuid());
+        var expected = Guid.NewGuid();
+
+        await using (var context = _fixture.CreateContext(user))
+        {
+            await CreateBehavior(context, user).Handle(
+                new FakeRequest(key, 100m),
+                _ => Task.FromResult(expected),
+                CancellationToken.None);
+        }
+
+        await using (var context = _fixture.CreateContext(user))
+        {
+            var result = await CreateBehavior(context, user).Handle(
+                new FakeRequest(key, 100m),
+                _ => Task.FromResult(Guid.NewGuid()),
+                CancellationToken.None);
+
+            result.Should().Be(expected);
         }
     }
 }

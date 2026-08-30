@@ -38,6 +38,7 @@ namespace Wallet.Api.Middleware
                 UniqueConstraintViolationException => (StatusCodes.Status409Conflict, "Conflict"),
                 IdempotentResponseUnavailableException => (StatusCodes.Status409Conflict, "Idempotent response unavailable"),
                 IdempotencyKeyReuseException => (StatusCodes.Status409Conflict, "Idempotency key reuse"),
+                IdempotencyPayloadMismatchException => (StatusCodes.Status409Conflict, "Idempotency payload mismatch"),
                 EmailAlreadyExistsException => (StatusCodes.Status409Conflict, "Email already exists"),
                 GroupNotFoundException => (StatusCodes.Status404NotFound, "Group not found"),
                 InvitationNotFoundException => (StatusCodes.Status404NotFound, "Invitation not found"),

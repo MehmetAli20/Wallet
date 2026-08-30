@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using MediatR;
 using Wallet.Application.Abstractions;
@@ -22,8 +24,10 @@ public class IdempotencyBehavior<TRequest, TResponse> : IPipelineBehavior<TReque
         TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
     {
         var requestName = typeof(TRequest).Name;
+        var requestHash = Fingerprint(request);
 
-        var lookup = await _store.FindAsync(request.IdempotencyKey, requestName, cancellationToken);
+        var lookup = await _store.FindAsync(
+            request.IdempotencyKey, requestName, requestHash, cancellationToken);
 
         if (lookup.Exists)
         {
@@ -35,7 +39,7 @@ public class IdempotencyBehavior<TRequest, TResponse> : IPipelineBehavior<TReque
             return JsonSerializer.Deserialize<TResponse>(lookup.Response)!;
         }
 
-        _store.Stage(request.IdempotencyKey, requestName);
+        _store.Stage(request.IdempotencyKey, requestName, requestHash);
 
         var response = await next();
 
@@ -44,4 +48,9 @@ public class IdempotencyBehavior<TRequest, TResponse> : IPipelineBehavior<TReque
 
         return response;
     }
+
+    private static string Fingerprint(TRequest request) =>
+        Convert.ToHexString(
+            SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(request))))
+            .ToLowerInvariant();
 }

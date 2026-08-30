@@ -8,8 +8,9 @@ namespace Wallet.Application.Abstractions.Accounts
 
     public interface IIdempotencyStore
     {
-        Task<IdempotencyLookup> FindAsync(string key, string requestName, CancellationToken cancellationToken = default);
-        void Stage(string key, string requestName);
+        Task<IdempotencyLookup> FindAsync(
+            string key, string requestName, string requestHash, CancellationToken cancellationToken = default);
+        void Stage(string key, string requestName, string? requestHash);
         Task SetResponseAsync(string key, string response, CancellationToken cancellationToken = default);
     }
 }

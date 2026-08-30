@@ -15,6 +15,7 @@ namespace Wallet.Infrastructure.Persistence.Configurations
             builder.HasKey(x => new { x.UserId, x.Key });
             builder.Property(x => x.Key).HasMaxLength(100);
             builder.Property(x => x.RequestName).HasMaxLength(200);
+            builder.Property(x => x.RequestHash).HasMaxLength(64);
         }
     }
 }
