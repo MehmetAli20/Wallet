@@ -7,11 +7,14 @@ using System.Text;
 using Wallet.Application.Abstractions;
 using Wallet.Application.Abstractions.Accounts;
 using Wallet.Application.Abstractions.Expenses;
+using StackExchange.Redis;
 using Wallet.Application.Abstractions.Activity;
+using Wallet.Application.Abstractions.RateLimiting;
 using Wallet.Application.Abstractions.Groups;
 using Wallet.Application.Abstractions.Settlements;
 using Wallet.Application.Abstractions.Users;
 using Wallet.Infrastructure.Authentication;
+using Wallet.Infrastructure.RateLimiting;
 using Wallet.Infrastructure.Persistence;
 using Wallet.Infrastructure.Persistence.Idempotency;
 using Wallet.Infrastructure.Persistence.Repositories.Activity;
@@ -38,6 +41,21 @@ namespace Wallet.Infrastructure
             services.AddScoped<IAccountRepository, AccountRepository>();
             services.AddScoped<IRecurringExpenseRepository, RecurringExpenseRepository>();
             services.AddScoped<IPlaceholderClaimRepository, PlaceholderClaimRepository>();
+
+            var redis = configuration.GetConnectionString("Redis");
+
+            if (!string.IsNullOrWhiteSpace(redis))
+            {
+                services.AddSingleton<IConnectionMultiplexer>(_ =>
+                {
+                    var options = ConfigurationOptions.Parse(redis);
+                    options.AbortOnConnectFail = false;
+
+                    return ConnectionMultiplexer.Connect(options);
+                });
+
+                services.AddSingleton<IRateLimiter, RedisRateLimiter>();
+            }
             services.AddScoped<ISettlementRepository, SettlementRepository>();
             services.AddScoped<IActivityRepository, ActivityRepository>();
             services.AddScoped<IExpenseRepository, ExpenseRepository>();
