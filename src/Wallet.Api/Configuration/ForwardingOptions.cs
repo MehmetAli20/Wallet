@@ -26,18 +26,13 @@ namespace Wallet.Api.Configuration
             options.ForwardLimit = ForwardLimit;
 
             options.KnownProxies.Clear();
-            options.KnownNetworks.Clear();
+            options.KnownIPNetworks.Clear();
 
             foreach (var proxy in KnownProxies)
                 options.KnownProxies.Add(IPAddress.Parse(proxy));
 
             foreach (var network in KnownNetworks)
-            {
-                var parsed = System.Net.IPNetwork.Parse(network);
-
-                options.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(
-                    parsed.BaseAddress, parsed.PrefixLength));
-            }
+                options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse(network));
         }
     }
 }
