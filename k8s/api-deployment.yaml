@@ -38,6 +38,8 @@ spec:
                   key: POSTGRES_DB
             - name: ConnectionStrings__WalletDb
               value: "Host=postgres;Port=5432;Database=$(POSTGRES_DB);Username=$(POSTGRES_USER);Password=$(POSTGRES_PASSWORD)"
+            - name: ConnectionStrings__Redis
+              value: "redis:6379"
             - name: Jwt__SigningKey
               valueFrom:
                 secretKeyRef:

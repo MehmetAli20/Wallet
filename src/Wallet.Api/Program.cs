@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Wallet.Api.Authentication;
 using Wallet.Api.Configuration;
 using Wallet.Api.Middleware;
+using Wallet.Api.RateLimiting;
 using Wallet.Application;
 using Wallet.Application.Abstractions.Users;
 using Wallet.Application.Users;
@@ -17,7 +18,30 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-builder.Services.AddControllers();
+var rateLimiting = builder.Configuration
+    .GetSection(RateLimitingOptions.SectionName)
+    .Get<RateLimitingOptions>() ?? new RateLimitingOptions();
+
+rateLimiting.EnsureUsable();
+
+if (rateLimiting.Enabled && string.IsNullOrWhiteSpace(builder.Configuration.GetConnectionString("Redis")))
+{
+    throw new InvalidOperationException(
+        "RateLimiting is enabled but ConnectionStrings:Redis is not set. " +
+        "Rate limiting needs Redis to share counters across instances. " +
+        "Set the connection string, or set RateLimiting:Enabled to false.");
+}
+
+builder.Services.Configure<RateLimitingOptions>(
+    builder.Configuration.GetSection(RateLimitingOptions.SectionName));
+
+builder.Services.AddControllers(options =>
+{
+    if (rateLimiting.Enabled)
+    {
+        options.Filters.Add<RateLimitFilter>();
+    }
+});
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi(options =>
 {

@@ -14,6 +14,8 @@ build:
         dockerfile: Dockerfile.worker
 manifests:
   rawYaml:
+    - k8s/redis-deployment.yaml
+    - k8s/redis-service.yaml
     - k8s/api-deployment.yaml
     - k8s/api-service.yaml
     - k8s/worker-deployment.yaml

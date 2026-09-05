@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FluentAssertions;
@@ -35,6 +35,7 @@ namespace Wallet.IntegrationTests.Api
             builder.UseSetting("Jwt:SigningKey", "wallet-integration-tests-signing-key-32b+");
             builder.UseSetting("Jwt:Issuer", "wallet-tests");
             builder.UseSetting("Jwt:Audience", "wallet-tests");
+            builder.UseSetting("RateLimiting:Enabled", "false");
         }
 
         async Task IAsyncLifetime.DisposeAsync()
