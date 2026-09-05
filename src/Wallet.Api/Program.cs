@@ -2,7 +2,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using Microsoft.AspNetCore.HttpOverrides;
 using Wallet.Api.Authentication;
+using Wallet.Api.Configuration;
 using Wallet.Api.Middleware;
 using Wallet.Application;
 using Wallet.Application.Abstractions.Users;
@@ -51,6 +53,12 @@ builder.Services.AddProblemDetails();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpContextCurrentUser>();
 
+var forwarding = builder.Configuration
+    .GetSection(ForwardingOptions.SectionName)
+    .Get<ForwardingOptions>() ?? new ForwardingOptions();
+
+builder.Services.Configure<ForwardedHeadersOptions>(forwarding.ApplyTo);
+
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? throw new InvalidOperationException("Jwt section is not configured.");
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
@@ -75,6 +83,11 @@ builder.Services.AddAuthorization(options =>
 
 
 var app = builder.Build();
+
+if (forwarding.Enabled)
+{
+    app.UseForwardedHeaders();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
