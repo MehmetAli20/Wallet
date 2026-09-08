@@ -105,5 +105,117 @@ namespace Wallet.UnitTests.Domain.Users
 
             user.Email.Should().Be("test@example.com");
         }
+
+        private static User ASignedUpUser() =>
+            new(Guid.NewGuid(), "testuser", "test@test.com", "hashedpassword", UserRole.User);
+
+        [Fact]
+        public void ANewUser_IsNotLockedOut()
+        {
+            var user = ASignedUpUser();
+
+            user.IsLockedOut(DateTimeOffset.UtcNow).Should().BeFalse();
+            user.AccessFailedCount.Should().Be(0);
+            user.LockoutEnd.Should().BeNull();
+        }
+
+        [Fact]
+        public void RegisterFailedAccess_BelowTheThreshold_DoesNotLock()
+        {
+            var user = ASignedUpUser();
+            var now = DateTimeOffset.UtcNow;
+
+            for (var i = 0; i < User.MaxFailedAccessAttempts - 1; i++)
+            {
+                user.RegisterFailedAccess(now);
+            }
+
+            user.IsLockedOut(now).Should().BeFalse();
+            user.AccessFailedCount.Should().Be(User.MaxFailedAccessAttempts - 1);
+        }
+
+        [Fact]
+        public void RegisterFailedAccess_AtTheThreshold_LocksAndClearsTheCounter()
+        {
+            var user = ASignedUpUser();
+            var now = DateTimeOffset.UtcNow;
+
+            for (var i = 0; i < User.MaxFailedAccessAttempts; i++)
+            {
+                user.RegisterFailedAccess(now);
+            }
+
+            user.IsLockedOut(now).Should().BeTrue();
+            user.AccessFailedCount.Should().Be(0);
+            user.LockoutEnd.Should().BeCloseTo(now.Add(User.LockoutDuration), TimeSpan.FromSeconds(1));
+        }
+
+        [Fact]
+        public void ALockedUser_IsOpenAgain_OnceTheWindowPasses()
+        {
+            var user = ASignedUpUser();
+            var now = DateTimeOffset.UtcNow;
+
+            for (var i = 0; i < User.MaxFailedAccessAttempts; i++)
+            {
+                user.RegisterFailedAccess(now);
+            }
+
+            user.IsLockedOut(now.Add(User.LockoutDuration).AddSeconds(-1)).Should().BeTrue();
+            user.IsLockedOut(now.Add(User.LockoutDuration).AddSeconds(1)).Should().BeFalse();
+        }
+
+        [Fact]
+        public void ResetAccessFailures_ClearsBothTheCounterAndTheLock()
+        {
+            var user = ASignedUpUser();
+            var now = DateTimeOffset.UtcNow;
+
+            for (var i = 0; i < User.MaxFailedAccessAttempts; i++)
+            {
+                user.RegisterFailedAccess(now);
+            }
+
+            user.ResetAccessFailures();
+
+            user.IsLockedOut(now).Should().BeFalse();
+            user.AccessFailedCount.Should().Be(0);
+            user.LockoutEnd.Should().BeNull();
+        }
+
+        [Fact]
+        public void ASuccessInBetween_MeansTheFailuresNeverAddUp()
+        {
+            var user = ASignedUpUser();
+            var now = DateTimeOffset.UtcNow;
+
+            for (var i = 0; i < User.MaxFailedAccessAttempts - 1; i++)
+            {
+                user.RegisterFailedAccess(now);
+            }
+
+            user.ResetAccessFailures();
+
+            for (var i = 0; i < User.MaxFailedAccessAttempts - 1; i++)
+            {
+                user.RegisterFailedAccess(now);
+            }
+
+            user.IsLockedOut(now).Should().BeFalse();
+        }
+
+        [Fact]
+        public void LockoutEnd_IsStoredInUtc()
+        {
+            var user = ASignedUpUser();
+            var local = new DateTimeOffset(2026, 9, 8, 12, 0, 0, TimeSpan.FromHours(3));
+
+            for (var i = 0; i < User.MaxFailedAccessAttempts; i++)
+            {
+                user.RegisterFailedAccess(local);
+            }
+
+            user.LockoutEnd!.Value.Offset.Should().Be(TimeSpan.Zero);
+        }
     }
 }
