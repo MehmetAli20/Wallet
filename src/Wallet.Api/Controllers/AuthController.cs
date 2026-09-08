@@ -25,7 +25,12 @@ namespace Wallet.Api.Controllers
         [HttpPost("login")]
         public async Task<ActionResult<LoginResponse>> Login(LoginRequest loginRequest, CancellationToken cancellationToken)
         {
-            var token = await _sender.Send(new LoginCommand(loginRequest.Username, loginRequest.Password), cancellationToken);
+            var token = await _sender.Send(
+                new LoginCommand(
+                    loginRequest.Username,
+                    loginRequest.Password,
+                    HttpContext.Connection.RemoteIpAddress?.ToString()),
+                cancellationToken);
 
             return new LoginResponse(token);
         }

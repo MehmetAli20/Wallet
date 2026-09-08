@@ -6,10 +6,6 @@ namespace Wallet.Domain.Users
 {
     public class User
     {
-        public const int MaxFailedAccessAttempts = 5;
-
-        public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
-
         public Guid Id { get; private set; }
         public string DisplayName { get; private set; }
         public string? Username { get; private set; }
@@ -17,8 +13,6 @@ namespace Wallet.Domain.Users
         public string? PasswordHash { get; private set; }
         public UserRole Role { get; private set; }
         public bool IsPlaceholder { get; private set; }
-        public int AccessFailedCount { get; private set; }
-        public DateTimeOffset? LockoutEnd { get; private set; }
 
         private User()
         {
@@ -111,30 +105,6 @@ namespace Wallet.Domain.Users
             }
 
             DisplayName = displayName.Trim();
-        }
-
-        public bool IsLockedOut(DateTimeOffset now)
-        {
-            return LockoutEnd is not null && LockoutEnd > now.ToUniversalTime();
-        }
-
-        public void RegisterFailedAccess(DateTimeOffset now)
-        {
-            AccessFailedCount++;
-
-            if (AccessFailedCount < MaxFailedAccessAttempts)
-            {
-                return;
-            }
-
-            AccessFailedCount = 0;
-            LockoutEnd = now.ToUniversalTime().Add(LockoutDuration);
-        }
-
-        public void ResetAccessFailures()
-        {
-            AccessFailedCount = 0;
-            LockoutEnd = null;
         }
 
         public static string NormalizeUsername(string username)

@@ -34,7 +34,7 @@ namespace Wallet.IntegrationTests.Api
         {
             var (client, username) = await ARegisteredUserAsync();
 
-            for (var i = 0; i < User.MaxFailedAccessAttempts; i++)
+            for (var i = 0; i < LoginLockout.MaxFailedAttempts; i++)
             {
                 var failed = await LoginAsync(client, username, "wrong-password");
 
@@ -51,7 +51,7 @@ namespace Wallet.IntegrationTests.Api
         {
             var (client, username) = await ARegisteredUserAsync();
 
-            for (var i = 0; i < User.MaxFailedAccessAttempts - 1; i++)
+            for (var i = 0; i < LoginLockout.MaxFailedAttempts - 1; i++)
             {
                 await LoginAsync(client, username, "wrong-password");
             }
@@ -59,7 +59,7 @@ namespace Wallet.IntegrationTests.Api
             var recovered = await LoginAsync(client, username, Password);
             recovered.StatusCode.Should().Be(HttpStatusCode.OK);
 
-            for (var i = 0; i < User.MaxFailedAccessAttempts - 1; i++)
+            for (var i = 0; i < LoginLockout.MaxFailedAttempts - 1; i++)
             {
                 await LoginAsync(client, username, "wrong-password");
             }
@@ -70,11 +70,30 @@ namespace Wallet.IntegrationTests.Api
         }
 
         [Fact]
+        public async Task FailuresSentInParallel_AreAllCounted()
+        {
+            var (client, username) = await ARegisteredUserAsync();
+
+            var burst = Enumerable
+                .Range(0, 20)
+                .Select(_ => LoginAsync(client, username, "wrong-password"));
+
+            await Task.WhenAll(burst);
+
+            var crossesTheThreshold = await LoginAsync(client, username, "wrong-password");
+            crossesTheThreshold.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+            var locked = await LoginAsync(client, username, Password);
+
+            locked.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+
+        [Fact]
         public async Task ALockedAccount_IsIndistinguishableFromAnUnknownOne()
         {
             var (client, username) = await ARegisteredUserAsync();
 
-            for (var i = 0; i < User.MaxFailedAccessAttempts; i++)
+            for (var i = 0; i < LoginLockout.MaxFailedAttempts; i++)
             {
                 await LoginAsync(client, username, "wrong-password");
             }

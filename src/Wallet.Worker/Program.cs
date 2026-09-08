@@ -1,4 +1,4 @@
-using Hangfire;
+﻿using Hangfire;
 using Hangfire.Dashboard;
 using Hangfire.PostgreSql;
 using Wallet.Application;
@@ -37,5 +37,10 @@ RecurringJob.AddOrUpdate<RecurringExpensesJob>(
     "recurring-expenses-job",
     job => job.RunAsync(),
     Cron.Hourly);
+
+RecurringJob.AddOrUpdate<LoginAttemptPruneJob>(
+    "login-attempt-prune-job",
+    job => job.RunAsync(),
+    Cron.Daily);
 
 app.Run();
