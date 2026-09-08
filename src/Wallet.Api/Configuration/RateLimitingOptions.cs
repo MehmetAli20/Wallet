@@ -5,7 +5,7 @@ namespace Wallet.Api.Configuration
     public sealed class RateLimitPolicySettings
     {
         public int Capacity { get; set; }
-        public double RefillPerMinute { get; set; }
+        public int WindowSeconds { get; set; }
     }
 
     public sealed class RateLimitingOptions
@@ -13,6 +13,7 @@ namespace Wallet.Api.Configuration
         public const string SectionName = "RateLimiting";
 
         public const string Anonymous = "anonymous-strict";
+        public const string AnonymousRegister = "anonymous-register";
         public const string Authenticated = "authenticated";
         public const string AuthenticatedWrite = "authenticated-write";
 
@@ -28,13 +29,14 @@ namespace Wallet.Api.Configuration
                     $"Rate limit policy '{name}' is not configured. Add RateLimiting:Policies:{name}.");
             }
 
-            if (settings.Capacity <= 0 || settings.RefillPerMinute <= 0)
+            if (settings.Capacity <= 0 || settings.WindowSeconds <= 0)
             {
                 throw new InvalidOperationException(
-                    $"Rate limit policy '{name}' must have a positive Capacity and RefillPerMinute.");
+                    $"Rate limit policy '{name}' must have a positive Capacity and WindowSeconds.");
             }
 
-            return new RateLimitPolicy(name, settings.Capacity, settings.RefillPerMinute / 60d);
+            return new RateLimitPolicy(
+                name, settings.Capacity, (double)settings.Capacity / settings.WindowSeconds);
         }
 
         public void EnsureUsable()
@@ -45,6 +47,7 @@ namespace Wallet.Api.Configuration
             }
 
             Resolve(Anonymous);
+            Resolve(AnonymousRegister);
             Resolve(Authenticated);
             Resolve(AuthenticatedWrite);
         }

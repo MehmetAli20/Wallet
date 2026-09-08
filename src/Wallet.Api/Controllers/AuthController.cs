@@ -2,7 +2,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Wallet.Api.Configuration;
 using Wallet.Api.Contracts.Users;
+using Wallet.Api.RateLimiting;
 using Wallet.Application.Users.Login;
 using Wallet.Application.Users.Register;
 
@@ -29,6 +31,7 @@ namespace Wallet.Api.Controllers
         }
 
         [AllowAnonymous]
+        [RateLimit(RateLimitingOptions.AnonymousRegister)]
         [HttpPost("register")]
         public async Task<ActionResult<RegisterResponse>> Register(RegisterRequest registerRequest, CancellationToken cancellationToken)
         {

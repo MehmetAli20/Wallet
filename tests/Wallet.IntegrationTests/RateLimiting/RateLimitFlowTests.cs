@@ -74,6 +74,41 @@ namespace Wallet.IntegrationTests.RateLimiting
         }
     }
 
+    public class RegisterRateLimitTests : IClassFixture<RegisterLimitFixture>
+    {
+        private readonly RegisterLimitFixture _fixture;
+
+        public RegisterRateLimitTests(RegisterLimitFixture fixture) => _fixture = fixture;
+
+        private static Task<HttpResponseMessage> RegisterAsync(HttpClient client)
+        {
+            var username = $"u{Guid.NewGuid():N}"[..20];
+
+            return client.PostAsJsonAsync("/api/v1/auth/register",
+                new RegisterRequest(username, $"{username}@test.com", "password123"));
+        }
+
+        [Fact]
+        public async Task RegistrationDrawsOnItsOwnBucket_NotTheGeneralAnonymousOne()
+        {
+            var client = _fixture.CreateClient();
+
+            for (var i = 0; i < 3; i++)
+            {
+                (await RegisterAsync(client)).StatusCode.Should().Be(HttpStatusCode.Created);
+            }
+
+            var denied = await RegisterAsync(client);
+
+            denied.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
+
+            var login = await client.PostAsJsonAsync("/api/v1/auth/login",
+                new LoginRequest("nobody", "wrong-password"));
+
+            login.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+    }
+
     public class AnonymousRateLimitTests : IClassFixture<AnonymousLimitFixture>
     {
         private readonly AnonymousLimitFixture _fixture;

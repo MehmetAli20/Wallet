@@ -19,6 +19,8 @@ namespace Wallet.IntegrationTests.RateLimiting
         protected abstract int AuthenticatedCapacity { get; }
         protected abstract int WriteCapacity { get; }
 
+        protected virtual int RegisterCapacity => 1000;
+
         public async Task InitializeAsync()
         {
             await Task.WhenAll(_postgres.StartAsync(), _redis.StartAsync());
@@ -41,6 +43,7 @@ namespace Wallet.IntegrationTests.RateLimiting
             builder.UseSetting("RateLimiting:Enabled", "true");
 
             Capacity(builder, "anonymous-strict", AnonymousCapacity);
+            Capacity(builder, "anonymous-register", RegisterCapacity);
             Capacity(builder, "authenticated", AuthenticatedCapacity);
             Capacity(builder, "authenticated-write", WriteCapacity);
         }
@@ -48,7 +51,7 @@ namespace Wallet.IntegrationTests.RateLimiting
         private static void Capacity(IWebHostBuilder builder, string policy, int capacity)
         {
             builder.UseSetting($"RateLimiting:Policies:{policy}:Capacity", capacity.ToString());
-            builder.UseSetting($"RateLimiting:Policies:{policy}:RefillPerMinute", "1");
+            builder.UseSetting($"RateLimiting:Policies:{policy}:WindowSeconds", "3600");
         }
 
         async Task IAsyncLifetime.DisposeAsync()
@@ -82,6 +85,14 @@ namespace Wallet.IntegrationTests.RateLimiting
         protected override int AnonymousCapacity => 200;
         protected override int AuthenticatedCapacity => 200;
         protected override int WriteCapacity => 3;
+    }
+
+    public sealed class RegisterLimitFixture : RateLimitedApiFixture
+    {
+        protected override int AnonymousCapacity => 200;
+        protected override int AuthenticatedCapacity => 200;
+        protected override int WriteCapacity => 200;
+        protected override int RegisterCapacity => 3;
     }
 
     public sealed class AnonymousLimitFixture : RateLimitedApiFixture
