@@ -37,6 +37,9 @@ services:
             ASPNETCORE_ENVIRONMENT: Development
             ConnectionStrings__WalletDb: "Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
             ConnectionStrings__Redis: "redis:6379"
+            Jwt__SigningKey: ${JWT_SIGNING_KEY}
+            Jwt__Issuer: wallet-api
+            Jwt__Audience: wallet-clients
         ports:
             - "8080:8080"
         depends_on:

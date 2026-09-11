@@ -38,7 +38,7 @@ namespace Wallet.Application.Users.Login
 
             var user = await _userRepository.GetByUsernameAsync(request.Username, cancellationToken);
 
-            var isRealUser = user is not null && !user.IsPlaceholder;
+            var isRealUser = user is not null && !string.IsNullOrEmpty(user.PasswordHash);
 
             var recent = isRealUser
                 ? await _loginAttempts.GetMostRecentAsync(
