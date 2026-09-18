@@ -158,7 +158,7 @@ endpoint tests boot the full API against it.
 dotnet test Wallet.slnx
 ```
 
-243 tests: 192 unit, 48 integration, 3 architecture.
+366 tests: 220 unit, 143 integration, 3 architecture.
 
 ## API overview
 
