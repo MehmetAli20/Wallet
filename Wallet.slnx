@@ -2,8 +2,11 @@
   <Folder Name="/Solution Items/">
     <File Path=".dockerignore" />
     <File Path=".env" />
+    <File Path=".env.example" />
     <File Path="docker-compose.yml" />
     <File Path="Dockerfile" />
+    <File Path="LICENCE.txt" />
+    <File Path="README.md" />
   </Folder>
   <Project Path="src/Wallet.Api/Wallet.Api.csproj" />
   <Project Path="src/Wallet.Application/Wallet.Application.csproj" />
