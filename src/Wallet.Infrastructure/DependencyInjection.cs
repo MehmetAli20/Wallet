@@ -65,6 +65,7 @@ namespace Wallet.Infrastructure
             services.AddScoped<IIdempotencyStore, IdempotencyStore>();
             services.AddScoped<IReconciliationRepository, ReconciliationRepository>();
             services.AddScoped<IGroupRepository, GroupRepository>();
+            services.AddScoped<IGroupInviteLinkRepository, GroupInviteLinkRepository>();
             services.AddScoped<IGroupBalanceRepository, GroupBalanceRepository>();
             services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
 

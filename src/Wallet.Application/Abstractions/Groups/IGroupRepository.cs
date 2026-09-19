@@ -11,5 +11,6 @@ namespace Wallet.Application.Abstractions.Groups
         Task AddAsync(Group group, CancellationToken cancellationToken = default);
         Task<Group?> GetByInvitationIdAsync(Guid invitationId, CancellationToken cancellationToken = default);
         Task<IReadOnlyList<PendingInvitation>> GetPendingInvitationsAsync(Guid userId, CancellationToken cancellationToken = default);
+        Task<Group?> GetByInviteTokenAsync(string token, DateTimeOffset asOf, CancellationToken cancellationToken = default);
     }
 }

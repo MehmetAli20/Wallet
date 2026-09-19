@@ -8,5 +8,8 @@ namespace Wallet.Application.Abstractions.Users
 
         Task<PlaceholderClaim?> GetUsableAsync(
             string token, DateTimeOffset asOf, CancellationToken cancellationToken = default);
+
+        Task<IReadOnlyList<PlaceholderClaim>> GetOutstandingForPlaceholderAsync(
+            Guid placeholderUserId, DateTimeOffset asOf, CancellationToken cancellationToken = default);
     }
 }

@@ -64,5 +64,15 @@ namespace Wallet.Infrastructure.Persistence.Repositories.Users
         {
             return await _context.Users.AnyAsync(u=>u.Id == id, cancellationToken);
         }
+
+        public async Task<IReadOnlyList<User>> GetPlaceholdersInGroupAsync(
+            Guid groupId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Users
+                .Where(u => u.IsPlaceholder)
+                .Where(u => _context.Groups.Any(g => g.Id == groupId && g.Members.Any(m => m.UserId == u.Id)))
+                .OrderBy(u => u.DisplayName)
+                .ToListAsync(cancellationToken);
+        }
     }
 }

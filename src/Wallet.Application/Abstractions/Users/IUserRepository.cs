@@ -14,5 +14,6 @@ namespace Wallet.Application.Abstractions.Users
         Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
         Task<User?> GetPlaceholderInMyGroupsAsync(Guid id, CancellationToken cancellationToken = default);
         Task<bool> DisplayNameTakenInGroupAsync(Guid groupId, string displayName, CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<User>> GetPlaceholdersInGroupAsync(Guid groupId, CancellationToken cancellationToken = default);
     }
 }

@@ -159,6 +159,37 @@ namespace Wallet.Domain.Groups
             Raise(new MemberJoined(Id, userId, DateTimeOffset.UtcNow));
         }
 
+        public bool Join(Guid userId, Guid invitedBy)
+        {
+            if (Kind == GroupKind.Pair)
+                throw new InvalidGroupOperationException("A pair cannot take a third member. Create a named group instead.");
+
+            if (userId == Guid.Empty)
+                throw new ArgumentException("User Id cannot be empty.", nameof(userId));
+
+            if (!IsActiveMember(invitedBy))
+                throw new InvalidGroupOperationException("The link was created by someone who is no longer a member.");
+
+            var existing = _members.SingleOrDefault(m => m.UserId == userId);
+
+            if (existing is not null)
+            {
+                if (existing.Status == GroupMemberStatus.Active)
+                    return false;
+
+                existing.Accept();
+                Raise(new MemberJoined(Id, userId, DateTimeOffset.UtcNow));
+                return true;
+            }
+
+            _members.Add(new GroupMember(
+                Guid.NewGuid(), Id, userId, GroupMemberRole.Member, GroupMemberStatus.Active, invitedBy));
+
+            Raise(new MemberJoined(Id, userId, DateTimeOffset.UtcNow));
+
+            return true;
+        }
+
         public void Remove(Guid userId, Guid removedBy)
         {
             if (Kind == GroupKind.Pair)

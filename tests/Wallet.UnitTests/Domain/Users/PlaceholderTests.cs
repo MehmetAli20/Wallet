@@ -63,17 +63,18 @@ namespace Wallet.UnitTests.Domain.Users
         [Fact]
         public void AClaimCanBeUsedOnce()
         {
-            var claim = PlaceholderClaim.Issue(
+            var issued = PlaceholderClaim.Issue(
                 Guid.NewGuid(), Guid.NewGuid(), DateTimeOffset.UtcNow.AddDays(1));
 
-            claim.Token.Should().HaveLength(64);
-            claim.UsedAt.Should().BeNull();
+            issued.Token.Should().StartWith($"{PlaceholderClaim.TokenPrefix}_");
+            issued.Claim.TokenHash.Should().NotBe(issued.Token);
+            issued.Claim.UsedAt.Should().BeNull();
 
-            claim.Use(DateTimeOffset.UtcNow);
+            issued.Claim.Use(DateTimeOffset.UtcNow);
 
-            claim.UsedAt.Should().NotBeNull();
+            issued.Claim.UsedAt.Should().NotBeNull();
 
-            var act = () => claim.Use(DateTimeOffset.UtcNow);
+            var act = () => issued.Claim.Use(DateTimeOffset.UtcNow);
 
             act.Should().Throw<InvalidOperationException>();
         }
@@ -81,10 +82,10 @@ namespace Wallet.UnitTests.Domain.Users
         [Fact]
         public void AnExpiredClaimCannotBeUsed()
         {
-            var claim = PlaceholderClaim.Issue(
+            var issued = PlaceholderClaim.Issue(
                 Guid.NewGuid(), Guid.NewGuid(), DateTimeOffset.UtcNow.AddDays(-1));
 
-            var act = () => claim.Use(DateTimeOffset.UtcNow);
+            var act = () => issued.Claim.Use(DateTimeOffset.UtcNow);
 
             act.Should().Throw<InvalidOperationException>();
         }

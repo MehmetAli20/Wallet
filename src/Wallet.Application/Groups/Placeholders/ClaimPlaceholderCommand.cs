@@ -65,13 +65,21 @@ namespace Wallet.Application.Groups.Placeholders
             if (!placeholder.IsPlaceholder)
                 throw new InvalidGroupOperationException("This member already has an account.");
 
-            var claim = PlaceholderClaim.Issue(
-                Guid.NewGuid(), placeholder.Id, DateTimeOffset.UtcNow.AddDays(14));
+            var now = DateTimeOffset.UtcNow;
 
-            await _claims.AddAsync(claim, cancellationToken);
+            foreach (var outstanding in await _claims.GetOutstandingForPlaceholderAsync(
+                placeholder.Id, now, cancellationToken))
+            {
+                outstanding.Revoke(now);
+            }
+
+            var issued = PlaceholderClaim.Issue(
+                Guid.NewGuid(), placeholder.Id, now.Add(PlaceholderClaim.Lifetime));
+
+            await _claims.AddAsync(issued.Claim, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            return claim.Token;
+            return issued.Token;
         }
     }
 

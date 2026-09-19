@@ -10,6 +10,8 @@ public class RetryBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TR
 {
     private const int MaxAttempts = 2;
 
+    private static readonly AsyncLocal<bool> Retrying = new();
+
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<RetryBehavior<TRequest, TResponse>> _logger;
 
@@ -22,13 +24,26 @@ public class RetryBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TR
     public async Task<TResponse> Handle(
         TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
     {
+        if (Retrying.Value)
+            return await next();
+
         for (var attempt = 1; attempt <= MaxAttempts; attempt++)
         {
             try
             {
-                return attempt == 1
-                    ? await next()
-                    : await SendFromFreshScope(request, cancellationToken);
+                if (attempt == 1)
+                    return await next();
+
+                Retrying.Value = true;
+
+                try
+                {
+                    return await SendFromFreshScope(request, cancellationToken);
+                }
+                finally
+                {
+                    Retrying.Value = false;
+                }
             }
             catch (ConcurrencyConflictException) when (attempt < MaxAttempts)
             {

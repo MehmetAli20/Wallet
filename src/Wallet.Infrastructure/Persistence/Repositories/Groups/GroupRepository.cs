@@ -61,6 +61,23 @@ namespace Wallet.Infrastructure.Persistence.Repositories.Groups
                 .FirstOrDefaultAsync(g => g.Members.Any(m => m.Id == invitationId), cancellationToken);
         }
 
+        public async Task<Group?> GetByInviteTokenAsync(string token, DateTimeOffset asOf, CancellationToken cancellationToken = default)
+        {
+            var hash = SecureToken.Hash(token);
+
+            return await _context.Groups
+                .IgnoreQueryFilters()
+                .Include(g => g.Members)
+                .FirstOrDefaultAsync(
+                    g => _context.GroupInviteLinks.Any(l =>
+                        l.GroupId == g.Id
+                     && l.TokenHash == hash
+                     && l.RevokedAt == null
+                     && l.Redemptions.Count < l.MaxUses
+                     && l.ExpiresAt > asOf),
+                    cancellationToken);
+        }
+
         public async Task<IReadOnlyList<PendingInvitation>> GetPendingInvitationsAsync(Guid userId, CancellationToken cancellationToken = default)
         {
             return await _context.Groups

@@ -14,6 +14,9 @@ namespace Wallet.Api.Contracts.Groups
                     .Select(m => new GroupMemberResponse(m.UserId, m.Role.ToString(), m.Status.ToString()))
                     .ToList());
 
+        public static IssuedTokenResponse ToResponse(this IssuedGroupToken issued) =>
+            new(issued.Kind.ToString(), issued.Id, issued.Token, issued.ExpiresAt, issued.MaxUses);
+
         public static GroupBalanceResponse ToResponse(this GroupBalanceReport report) =>
             new(report.GroupId,
                 report.Currency,

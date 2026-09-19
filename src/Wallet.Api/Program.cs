@@ -85,6 +85,13 @@ builder.Services.Configure<ForwardedHeadersOptions>(forwarding.ApplyTo);
 
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? throw new InvalidOperationException("Jwt section is not configured.");
 
+if (string.IsNullOrWhiteSpace(jwtOptions.SigningKey)
+    || System.Text.Encoding.UTF8.GetByteCount(jwtOptions.SigningKey) < 32)
+{
+    throw new InvalidOperationException(
+        "Jwt:SigningKey must be at least 32 bytes. Set it in configuration, user-secrets, or the JWT_SIGNING_KEY environment variable.");
+}
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters

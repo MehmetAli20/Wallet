@@ -949,6 +949,288 @@ namespace Wallet.IntegrationTests.Api
             response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         }
 
+        [Fact]
+        public async Task AnInviteLink_LetsSomeoneOutsideTheGroupJoin()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+            var outsider = await _fixture.RegisterAsync();
+
+            var link = await IssueInviteLinkAsync(members[0], groupId);
+
+            link.Kind.Should().Be("Invite");
+            link.Token.Should().StartWith("wli_");
+            link.MaxUses.Should().Be(1);
+
+            var joined = await JoinByLinkAsync(outsider, link.Token);
+            joined.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var group = (await joined.Content.ReadFromJsonAsync<GroupResponse>())!;
+
+            group.Id.Should().Be(groupId);
+            group.Members.Should().ContainSingle(m => m.UserId == outsider.Id && m.Status == "Active");
+
+            (await GroupsAsync(outsider)).Should().Contain(g => g.Id == groupId);
+        }
+
+        [Fact]
+        public async Task TheDefaultInviteLink_IsSingleUse()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+            var first = await _fixture.RegisterAsync();
+            var second = await _fixture.RegisterAsync();
+
+            var link = await IssueInviteLinkAsync(members[0], groupId);
+
+            (await JoinByLinkAsync(first, link.Token)).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await JoinByLinkAsync(second, link.Token)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+            var group = (await GroupsAsync(members[0])).Single(g => g.Id == groupId);
+
+            group.Members.Should().NotContain(m => m.UserId == second.Id);
+        }
+
+        [Fact]
+        public async Task AnInviteLinkWithThreeUses_AdmitsExactlyThree()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+
+            var newcomers = new[]
+            {
+                await _fixture.RegisterAsync(),
+                await _fixture.RegisterAsync(),
+                await _fixture.RegisterAsync()
+            };
+
+            var late = await _fixture.RegisterAsync();
+
+            var link = await IssueInviteLinkAsync(members[0], groupId, maxUses: 3);
+
+            link.MaxUses.Should().Be(3);
+
+            foreach (var newcomer in newcomers)
+                (await JoinByLinkAsync(newcomer, link.Token)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+            (await JoinByLinkAsync(late, link.Token)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+            var group = (await GroupsAsync(members[0])).Single(g => g.Id == groupId);
+
+            group.Members.Should().HaveCount(5);
+        }
+
+        [Fact]
+        public async Task AnExistingMemberFollowingTheLink_DoesNotBurnTheInvite()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+            var invitee = await _fixture.RegisterAsync();
+
+            var link = await IssueInviteLinkAsync(members[0], groupId);
+
+            (await JoinByLinkAsync(members[1], link.Token)).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await JoinByLinkAsync(invitee, link.Token)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var group = (await GroupsAsync(members[0])).Single(g => g.Id == groupId);
+
+            group.Members.Should().ContainSingle(m => m.UserId == invitee.Id);
+        }
+
+        [Fact]
+        public async Task FollowingTheSameLinkTwice_JoinsOnce_AndCostsOneUse()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+            var invitee = await _fixture.RegisterAsync();
+            var other = await _fixture.RegisterAsync();
+
+            var link = await IssueInviteLinkAsync(members[0], groupId, maxUses: 2);
+
+            (await JoinByLinkAsync(invitee, link.Token)).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await JoinByLinkAsync(invitee, link.Token)).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await JoinByLinkAsync(other, link.Token)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var group = (await GroupsAsync(members[0])).Single(g => g.Id == groupId);
+
+            group.Members.Count(m => m.UserId == invitee.Id).Should().Be(1);
+            group.Members.Should().HaveCount(4);
+        }
+
+        [Fact]
+        public async Task ARevokedInviteLink_StopsWorking()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+            var outsider = await _fixture.RegisterAsync();
+
+            var link = await IssueInviteLinkAsync(members[0], groupId);
+
+            var revoked = await members[0].Client.DeleteAsync(
+                $"/api/v1/groups/{groupId}/invite-links/{link.Id}");
+
+            revoked.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            (await JoinByLinkAsync(outsider, link.Token)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        [Fact]
+        public async Task RevokingAnInviteLinkOfAGroupYouAreNotIn_Returns404()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+            var outsider = await _fixture.RegisterAsync();
+
+            var link = await IssueInviteLinkAsync(members[0], groupId);
+
+            var response = await outsider.Client.DeleteAsync(
+                $"/api/v1/groups/{groupId}/invite-links/{link.Id}");
+
+            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        }
+
+        [Fact]
+        public async Task AnUnknownToken_IsRejectedTheSameWayAsARevokedOne()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+            var outsider = await _fixture.RegisterAsync();
+
+            var link = await IssueInviteLinkAsync(members[0], groupId);
+
+            await members[0].Client.DeleteAsync($"/api/v1/groups/{groupId}/invite-links/{link.Id}");
+
+            var revoked = await JoinByLinkAsync(outsider, link.Token);
+            var unknown = await JoinByLinkAsync(outsider, "wli_" + new string('a', 43));
+
+            revoked.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            unknown.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+            (await revoked.Content.ReadAsStringAsync())
+                .Should().Be(await unknown.Content.ReadAsStringAsync());
+        }
+
+        [Fact]
+        public async Task APairCannotIssueAnInviteLink()
+        {
+            var ayse = await _fixture.RegisterAsync();
+            var burak = await _fixture.RegisterAsync();
+
+            var pairId = await EnsurePairAsync(ayse, burak);
+
+            var response = await ayse.Client.PostAsJsonAsync(
+                $"/api/v1/groups/{pairId}/invite-links", new IssueInviteLinkRequest(null, null));
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        [Fact]
+        public async Task IssuingAnInviteLinkForAGroupYouAreNotIn_Returns404()
+        {
+            var (groupId, _) = await GroupOfAsync(2);
+            var outsider = await _fixture.RegisterAsync();
+
+            var response = await outsider.Client.PostAsJsonAsync(
+                $"/api/v1/groups/{groupId}/invite-links", new IssueInviteLinkRequest(null, null));
+
+            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        }
+
+        [Fact]
+        public async Task AClaimTokenCannotBeIssuedForSomeoneWithARealAccount()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+
+            var response = await members[0].Client.PostAsJsonAsync(
+                $"/api/v1/groups/{groupId}/invite-links",
+                new IssueInviteLinkRequest(members[1].Id, null));
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        [Fact]
+        public async Task AClaimTokenCannotAskForExtraUses()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+            var mehmet = await AddPlaceholderAsync(members[0], groupId, "Mehmet");
+
+            var response = await members[0].Client.PostAsJsonAsync(
+                $"/api/v1/groups/{groupId}/invite-links", new IssueInviteLinkRequest(mehmet, 5));
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        [Fact]
+        public async Task AClaimTokenIssuedThroughTheInviteEndpoint_ClaimsThePlaceholder()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+            var mehmet = await AddPlaceholderAsync(members[0], groupId, "Mehmet");
+
+            var issued = await IssueInviteLinkAsync(members[0], groupId, placeholderId: mehmet);
+
+            issued.Kind.Should().Be("PlaceholderClaim");
+            issued.Token.Should().StartWith("wpc_");
+            issued.MaxUses.Should().Be(1);
+
+            var username = $"u{Guid.NewGuid():N}"[..20];
+            var claimed = await ClaimAsync(issued.Token, username, $"{username}@test.com", "password123");
+
+            claimed.Should().Be(mehmet);
+        }
+
+        [Fact]
+        public async Task IssuingASecondClaimToken_KillsTheFirstOne()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+            var mehmet = await AddPlaceholderAsync(members[0], groupId, "Mehmet");
+
+            var first = await IssueInviteLinkAsync(members[0], groupId, placeholderId: mehmet);
+            var second = await IssueInviteLinkAsync(members[0], groupId, placeholderId: mehmet);
+
+            var username = $"u{Guid.NewGuid():N}"[..20];
+
+            var withFirst = await _fixture.CreateClient().PostAsJsonAsync(
+                "/api/v1/placeholders/claim",
+                new ClaimPlaceholderRequest(first.Token, username, $"{username}@test.com", "password123"));
+
+            withFirst.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+            (await ClaimAsync(second.Token, username, $"{username}@test.com", "password123"))
+                .Should().Be(mehmet);
+        }
+
+        [Fact]
+        public async Task TheGroupPlaceholderList_ShowsOnlyPlaceholders_AndOnlyToMembers()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+            var mehmet = await AddPlaceholderAsync(members[0], groupId, "Mehmet");
+            var outsider = await _fixture.RegisterAsync();
+
+            var seenByMember = await PlaceholdersAsync(members[0], groupId);
+
+            seenByMember.Should().ContainSingle();
+            seenByMember[0].UserId.Should().Be(mehmet);
+            seenByMember[0].DisplayName.Should().Be("Mehmet");
+
+            (await PlaceholdersAsync(outsider, groupId)).Should().BeEmpty();
+        }
+
+        private static async Task<IssuedTokenResponse> IssueInviteLinkAsync(
+            TestUser member, Guid groupId, Guid? placeholderId = null, int? maxUses = null)
+        {
+            var response = await member.Client.PostAsJsonAsync(
+                $"/api/v1/groups/{groupId}/invite-links",
+                new IssueInviteLinkRequest(placeholderId, maxUses));
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            return (await response.Content.ReadFromJsonAsync<IssuedTokenResponse>())!;
+        }
+
+        private static async Task<HttpResponseMessage> JoinByLinkAsync(TestUser user, string token) =>
+            await user.Client.PostAsJsonAsync(
+                "/api/v1/groups/invite-links/join", new JoinGroupRequest(token));
+
+        private static async Task<List<GroupResponse>> GroupsAsync(TestUser user) =>
+            (await user.Client.GetFromJsonAsync<List<GroupResponse>>("/api/v1/groups"))!;
+
+        private static async Task<List<GroupPlaceholderResponse>> PlaceholdersAsync(
+            TestUser user, Guid groupId) =>
+            (await user.Client.GetFromJsonAsync<List<GroupPlaceholderResponse>>(
+                $"/api/v1/groups/{groupId}/placeholders"))!;
+
         private static async Task<Guid> CreateGroupAsync(TestUser owner, string currency = "TRY")
         {
             var created = await owner.Client.PostAsJsonAsync(

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Wallet.Application.Abstractions.Users;
+using Wallet.Domain.Common;
 using Wallet.Domain.Users;
 
 namespace Wallet.Infrastructure.Persistence.Repositories.Users
@@ -17,10 +18,26 @@ namespace Wallet.Infrastructure.Persistence.Repositories.Users
             await _context.PlaceholderClaims.AddAsync(claim, cancellationToken);
 
         public async Task<PlaceholderClaim?> GetUsableAsync(
-            string token, DateTimeOffset asOf, CancellationToken cancellationToken = default) =>
-            await _context.PlaceholderClaims
+            string token, DateTimeOffset asOf, CancellationToken cancellationToken = default)
+        {
+            var hash = SecureToken.Hash(token);
+
+            return await _context.PlaceholderClaims
                 .FirstOrDefaultAsync(
-                    c => c.Token == token && c.UsedAt == null && c.ExpiresAt > asOf,
+                    c => c.TokenHash == hash
+                      && c.UsedAt == null
+                      && c.RevokedAt == null
+                      && c.ExpiresAt > asOf,
                     cancellationToken);
+        }
+
+        public async Task<IReadOnlyList<PlaceholderClaim>> GetOutstandingForPlaceholderAsync(
+            Guid placeholderUserId, DateTimeOffset asOf, CancellationToken cancellationToken = default) =>
+            await _context.PlaceholderClaims
+                .Where(c => c.PlaceholderUserId == placeholderUserId
+                         && c.UsedAt == null
+                         && c.RevokedAt == null
+                         && c.ExpiresAt > asOf)
+                .ToListAsync(cancellationToken);
     }
 }

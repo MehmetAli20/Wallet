@@ -11,8 +11,8 @@ namespace Wallet.Infrastructure.Persistence.Configurations
             builder.ToTable("PlaceholderClaims");
             builder.HasKey(c => c.Id);
 
-            builder.Property(c => c.Token).IsRequired().HasMaxLength(64);
-            builder.HasIndex(c => c.Token).IsUnique();
+            builder.Property(c => c.TokenHash).IsRequired().HasMaxLength(64);
+            builder.HasIndex(c => c.TokenHash).IsUnique();
             builder.HasIndex(c => c.PlaceholderUserId);
         }
     }
