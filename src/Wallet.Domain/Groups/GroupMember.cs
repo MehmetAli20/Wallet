@@ -49,6 +49,11 @@ namespace Wallet.Domain.Groups
 
         internal void Accept()
         {
+            if(Status == GroupMemberStatus.Removed)
+            {
+                throw new InvalidGroupOperationException("A removed member needs a new invitation to return.");
+            }
+
             if(Status == GroupMemberStatus.Active)
             {
                 throw new InvalidGroupOperationException("Member has already joined.");
@@ -56,6 +61,26 @@ namespace Wallet.Domain.Groups
 
             Status = GroupMemberStatus.Active;
             JoinedAt = DateTimeOffset.UtcNow;
+        }
+
+        internal void Remove()
+        {
+            if(Status == GroupMemberStatus.Removed)
+            {
+                throw new InvalidGroupOperationException("Member has already been removed.");
+            }
+
+            Status = GroupMemberStatus.Removed;
+            JoinedAt = null;
+        }
+
+        internal void Reinvite(Guid invitedBy)
+        {
+            Status = GroupMemberStatus.Invited;
+            Role = GroupMemberRole.Member;
+            InvitedBy = invitedBy;
+            InvitedAt = DateTimeOffset.UtcNow;
+            JoinedAt = null;
         }
     }
 }

@@ -7,6 +7,7 @@ namespace Wallet.Domain.Groups
     public enum GroupMemberStatus
     {
         Invited,
-        Active
+        Active,
+        Removed
     }
 }

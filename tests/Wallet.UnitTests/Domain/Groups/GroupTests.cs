@@ -195,8 +195,9 @@ namespace Wallet.UnitTests.Domain.Groups
 
             group.Remove(invited, group.Members[0].UserId);
 
-            group.Members.Should().ContainSingle();
-            group.Members.Should().NotContain(m => m.UserId == invited);
+            group.IsActiveMember(invited).Should().BeFalse();
+            group.Members.Single(m => m.UserId == invited).Status
+                .Should().Be(GroupMemberStatus.Removed);
         }
 
         [Fact]
@@ -243,6 +244,79 @@ namespace Wallet.UnitTests.Domain.Groups
             var act = () => group.Remove(creator, creator);
 
             act.Should().Throw<InvalidGroupOperationException>();
+        }
+
+        [Fact]
+        public void Remove_Twice_Throws()
+        {
+            var group = NewNamed();
+            var admin = group.Members[0].UserId;
+            var invited = Guid.NewGuid();
+
+            group.Invite(invited, admin);
+            group.Remove(invited, admin);
+
+            var act = () => group.Remove(invited, admin);
+
+            act.Should().Throw<InvalidGroupOperationException>();
+        }
+
+        [Fact]
+        public void ARemovedMember_CannotComeBackThroughAnInviteLink()
+        {
+            var group = NewNamed();
+            var admin = group.Members[0].UserId;
+            var invited = Guid.NewGuid();
+
+            group.Invite(invited, admin);
+            group.Accept(invited);
+            group.Remove(invited, admin);
+
+            var act = () => group.Join(invited, admin);
+
+            act.Should().Throw<InvalidGroupOperationException>();
+            group.IsActiveMember(invited).Should().BeFalse();
+        }
+
+        [Fact]
+        public void ARemovedMember_CannotAcceptTheirOldInvitation()
+        {
+            var group = NewNamed();
+            var admin = group.Members[0].UserId;
+            var invited = Guid.NewGuid();
+
+            group.Invite(invited, admin);
+            group.Accept(invited);
+            group.Remove(invited, admin);
+
+            var act = () => group.Accept(invited);
+
+            act.Should().Throw<InvalidGroupOperationException>();
+            group.IsActiveMember(invited).Should().BeFalse();
+        }
+
+        [Fact]
+        public void ARemovedMember_ComesBackOnlyThroughAFreshInvitation()
+        {
+            var group = NewNamed();
+            var admin = group.Members[0].UserId;
+            var invited = Guid.NewGuid();
+
+            group.Invite(invited, admin);
+            group.Accept(invited);
+            group.Remove(invited, admin);
+
+            var reinvited = group.Invite(invited, admin);
+
+            reinvited.Status.Should().Be(GroupMemberStatus.Invited);
+            reinvited.Role.Should().Be(GroupMemberRole.Member);
+            reinvited.JoinedAt.Should().BeNull();
+
+            group.Members.Count(m => m.UserId == invited).Should().Be(1);
+
+            group.Accept(invited);
+
+            group.IsActiveMember(invited).Should().BeTrue();
         }
 
 

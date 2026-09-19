@@ -91,8 +91,19 @@ namespace Wallet.Domain.Groups
             if (!IsActiveMember(invitedBy))
                 throw new InvalidGroupOperationException("Only an active member can invite.");
 
-            if (_members.Any(m => m.UserId == userId))
-                throw new InvalidGroupOperationException("User is already in the group.");
+            var existing = _members.SingleOrDefault(m => m.UserId == userId);
+
+            if (existing is not null)
+            {
+                if (existing.Status != GroupMemberStatus.Removed)
+                    throw new InvalidGroupOperationException("User is already in the group.");
+
+                existing.Reinvite(invitedBy);
+
+                Raise(new MemberInvited(Id, userId, invitedBy, DateTimeOffset.UtcNow));
+
+                return existing;
+            }
 
             var member = new GroupMember(
                 Guid.NewGuid(), Id, userId, GroupMemberRole.Member, GroupMemberStatus.Invited, invitedBy);
@@ -174,6 +185,9 @@ namespace Wallet.Domain.Groups
 
             if (existing is not null)
             {
+                if (existing.Status == GroupMemberStatus.Removed)
+                    throw new InvalidGroupOperationException("You were removed from this group and need a new invitation to return.");
+
                 if (existing.Status == GroupMemberStatus.Active)
                     return false;
 
@@ -195,16 +209,19 @@ namespace Wallet.Domain.Groups
             if (Kind == GroupKind.Pair)
                 throw new InvalidGroupOperationException("Members of a pair cannot be removed.");
 
-            var member = _members.SingleOrDefault(m => m.UserId == userId)
+            var member = _members.SingleOrDefault(
+                m => m.UserId == userId && m.Status != GroupMemberStatus.Removed)
                 ?? throw new InvalidGroupOperationException("User is not in this group.");
 
-            if (member.Role == GroupMemberRole.Admin && _members.Count(m => m.Role == GroupMemberRole.Admin) == 1)
+            if (member.Role == GroupMemberRole.Admin
+                && _members.Count(m => m.Role == GroupMemberRole.Admin
+                                    && m.Status == GroupMemberStatus.Active) == 1)
                 throw new InvalidGroupOperationException("The last admin cannot be removed.");
 
             if (removedBy == Guid.Empty)
                 throw new ArgumentException("RemovedBy cannot be empty.", nameof(removedBy));
 
-            _members.Remove(member);
+            member.Remove();
 
             Raise(new MemberRemoved(Id, userId, removedBy, DateTimeOffset.UtcNow));
         }
