@@ -1207,6 +1207,109 @@ namespace Wallet.IntegrationTests.Api
             (await PlaceholdersAsync(outsider, groupId)).Should().BeEmpty();
         }
 
+        [Fact]
+        public async Task LeavingAGroupYouOweNothingIn_TakesYouOutOfIt()
+        {
+            var (groupId, members) = await GroupOfAsync(3);
+            var leaver = members[2];
+
+            var response = await RemoveMemberAsync(leaver, groupId, leaver.Id);
+            response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            (await GroupsAsync(leaver)).Should().NotContain(g => g.Id == groupId);
+
+            var seenByAdmin = (await GroupsAsync(members[0])).Single(g => g.Id == groupId);
+
+            seenByAdmin.Members.Single(m => m.UserId == leaver.Id).Status.Should().Be("Removed");
+        }
+
+        [Fact]
+        public async Task LeavingWithAnOpenBalance_IsRefused()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+
+            await CreateExpenseAsync(members[0], groupId, 60m, members);
+
+            Net(await BalanceAsync(members[0], groupId), members[1].Id).Should().Be(-30m);
+
+            var response = await RemoveMemberAsync(members[1], groupId, members[1].Id);
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+            (await GroupsAsync(members[1])).Should().Contain(g => g.Id == groupId);
+        }
+
+        [Fact]
+        public async Task LeavingWithOffsettingDebts_IsRefusedEvenThoughTheNetIsZero()
+        {
+            var (groupId, members) = await GroupOfAsync(3);
+            var middle = members[1];
+
+            await CreateExpenseAsync(members[0], groupId, 100m, new[] { members[0], middle });
+            await CreateExpenseAsync(middle, groupId, 100m, new[] { middle, members[2] });
+
+            Net(await BalanceAsync(members[0], groupId), middle.Id).Should().Be(0m);
+
+            var response = await RemoveMemberAsync(middle, groupId, middle.Id);
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        [Fact]
+        public async Task APlainMemberCannotRemoveAnother()
+        {
+            var (groupId, members) = await GroupOfAsync(3);
+
+            var response = await RemoveMemberAsync(members[1], groupId, members[2].Id);
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+            (await GroupsAsync(members[2])).Should().Contain(g => g.Id == groupId);
+        }
+
+        [Fact]
+        public async Task TheAdminCanRemoveAMemberWhoOwesNothing()
+        {
+            var (groupId, members) = await GroupOfAsync(3);
+
+            var response = await RemoveMemberAsync(members[0], groupId, members[2].Id);
+
+            response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            (await GroupsAsync(members[2])).Should().NotContain(g => g.Id == groupId);
+        }
+
+        [Fact]
+        public async Task ARemovedMemberCannotRejoinWithAnInviteLink()
+        {
+            var (groupId, members) = await GroupOfAsync(3);
+            var removed = members[2];
+
+            (await RemoveMemberAsync(members[0], groupId, removed.Id))
+                .StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            var link = await IssueInviteLinkAsync(members[0], groupId);
+
+            (await JoinByLinkAsync(removed, link.Token)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+            (await GroupsAsync(removed)).Should().NotContain(g => g.Id == groupId);
+        }
+
+        [Fact]
+        public async Task RemovingAMemberOfAGroupYouAreNotIn_Returns404()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+            var outsider = await _fixture.RegisterAsync();
+
+            var response = await RemoveMemberAsync(outsider, groupId, members[1].Id);
+
+            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        }
+
+        private static async Task<HttpResponseMessage> RemoveMemberAsync(
+            TestUser actor, Guid groupId, Guid userId) =>
+            await actor.Client.DeleteAsync($"/api/v1/groups/{groupId}/members/{userId}");
+
         private static async Task<IssuedTokenResponse> IssueInviteLinkAsync(
             TestUser member, Guid groupId, Guid? placeholderId = null, int? maxUses = null)
         {

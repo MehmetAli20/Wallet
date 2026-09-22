@@ -9,6 +9,7 @@ using Wallet.Application.Groups.CreateGroup;
 using Wallet.Application.Groups.GetGroupBalance;
 using Wallet.Application.Groups.GetMyGroups;
 using Wallet.Application.Groups.InviteToGroup;
+using Wallet.Application.Groups.RemoveGroupMember;
 
 namespace Wallet.Api.Controllers
 {
@@ -42,6 +43,15 @@ namespace Wallet.Api.Controllers
         public async Task<IActionResult> Invite(Guid groupId, InviteToGroupRequest request, CancellationToken cancellationToken)
         {
             await _sender.Send(new InviteToGroupCommand(groupId, request.UserId), cancellationToken);
+            return NoContent();
+        }
+
+        [HttpDelete("{groupId:guid}/members/{userId:guid}")]
+        public async Task<IActionResult> RemoveMember(
+            Guid groupId, Guid userId, CancellationToken cancellationToken)
+        {
+            await _sender.Send(new RemoveGroupMemberCommand(groupId, userId), cancellationToken);
+
             return NoContent();
         }
 
