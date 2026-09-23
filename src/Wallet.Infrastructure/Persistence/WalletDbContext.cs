@@ -24,6 +24,7 @@ namespace Wallet.Infrastructure.Persistence
         public DbSet<Account> Accounts => Set<Account>();
         public DbSet<User> Users => Set<User>();
         public DbSet<LoginAttempt> LoginAttempts => Set<LoginAttempt>();
+        public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
         public DbSet<LedgerEntry> LedgerEntries => Set<LedgerEntry>();
         public DbSet<RecurringExpense> RecurringExpenses => Set<RecurringExpense>();
         public DbSet<PlaceholderClaim> PlaceholderClaims => Set<PlaceholderClaim>();
