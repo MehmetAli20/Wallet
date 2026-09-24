@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -92,20 +93,30 @@ if (string.IsNullOrWhiteSpace(jwtOptions.SigningKey)
         "Jwt:SigningKey must be at least 32 bytes. Set it in configuration, user-secrets, or the JWT_SIGNING_KEY environment variable.");
 }
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
+builder.Services
+    .AddAuthentication(SessionAuthentication.SelectorScheme)
+    .AddPolicyScheme(SessionAuthentication.SelectorScheme, SessionAuthentication.SelectorScheme, options =>
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtOptions.Issuer,
-        ValidAudience = jwtOptions.Audience,
-        IssuerSigningKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(jwtOptions.SigningKey)),
-        ClockSkew = TimeSpan.FromSeconds(30)
-    };
-});
+        options.ForwardDefaultSelector = context =>
+            SessionAuthentication.UsesAuthorizationHeader(context.Request)
+                ? JwtBearerDefaults.AuthenticationScheme
+                : SessionAuthentication.Scheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtOptions.Issuer,
+            ValidAudience = jwtOptions.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(jwtOptions.SigningKey)),
+            ClockSkew = TimeSpan.FromSeconds(30)
+        };
+    })
+    .AddScheme<AuthenticationSchemeOptions, SessionAuthenticationHandler>(SessionAuthentication.Scheme, _ => { });
 
 builder.Services.AddAuthorization(options =>
 {
@@ -157,6 +168,7 @@ app.UseExceptionHandler();
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
+app.UseMiddleware<CsrfProtectionMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();

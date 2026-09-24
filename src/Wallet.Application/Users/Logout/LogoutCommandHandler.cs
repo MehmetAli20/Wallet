@@ -24,11 +24,7 @@ namespace Wallet.Application.Users.Logout
             if (presented is null)
                 return;
 
-            foreach (var active in await _refreshTokens.GetActiveInFamilyAsync(
-                presented.FamilyId, now, cancellationToken))
-            {
-                active.Revoke(now);
-            }
+            await _refreshTokens.RevokeFamilyAsync(presented.FamilyId, now, cancellationToken);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }

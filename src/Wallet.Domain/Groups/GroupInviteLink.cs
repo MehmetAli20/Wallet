@@ -6,7 +6,11 @@ using Wallet.Domain.Exceptions;
 
 namespace Wallet.Domain.Groups
 {
-    public sealed record IssuedInviteLink(GroupInviteLink Link, string Token);
+    public sealed record IssuedInviteLink(GroupInviteLink Link, string Token)
+    {
+        public override string ToString() =>
+            $"{nameof(IssuedInviteLink)} {{ LinkId = {Link.Id}, Token = *** }}";
+    }
 
     public class GroupInviteLink
     {

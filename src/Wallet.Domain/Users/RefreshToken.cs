@@ -3,7 +3,11 @@ using Wallet.Domain.Common;
 
 namespace Wallet.Domain.Users
 {
-    public sealed record IssuedRefreshToken(RefreshToken RefreshToken, string Token);
+    public sealed record IssuedRefreshToken(RefreshToken RefreshToken, string Token)
+    {
+        public override string ToString() =>
+            $"{nameof(IssuedRefreshToken)} {{ Id = {RefreshToken.Id}, FamilyId = {RefreshToken.FamilyId}, Token = *** }}";
+    }
 
     public class RefreshToken
     {
@@ -12,6 +16,7 @@ namespace Wallet.Domain.Users
         public static readonly TimeSpan Lifetime = TimeSpan.FromDays(14);
         public static readonly TimeSpan AbsoluteLifetime = TimeSpan.FromDays(30);
         public static readonly TimeSpan ReuseInterval = TimeSpan.FromSeconds(10);
+        public static readonly TimeSpan RequestLifetime = TimeSpan.FromMinutes(15);
 
         public Guid Id { get; private set; }
         public Guid UserId { get; private set; }
@@ -60,6 +65,18 @@ namespace Wallet.Domain.Users
             UsedAt is not null
             && RevokedAt is null
             && asOf.ToUniversalTime() - UsedAt.Value <= ReuseInterval;
+
+        public bool CanAuthenticateRequest(DateTimeOffset asOf)
+        {
+            var now = asOf.ToUniversalTime();
+
+            if (RevokedAt is not null || ExpiresAt <= now)
+                return false;
+
+            return UsedAt is null
+                ? now - CreatedAt < RequestLifetime
+                : IsWithinReuseInterval(now);
+        }
 
         public void MarkUsed(DateTimeOffset at)
         {

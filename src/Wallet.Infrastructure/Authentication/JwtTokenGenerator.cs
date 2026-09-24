@@ -21,6 +21,9 @@ namespace Wallet.Infrastructure.Authentication
 
         public string GenerateToken(User user)
         {
+            if (user.IsPlaceholder)
+                throw new InvalidOperationException("A placeholder user cannot receive an access token.");
+
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey));
 
             var descriptor = new SecurityTokenDescriptor
@@ -32,7 +35,6 @@ namespace Wallet.Infrastructure.Authentication
                 Claims = new Dictionary<string, object>
                 {
                     [JwtRegisteredClaimNames.Sub] = user.Id.ToString(),
-                    [JwtRegisteredClaimNames.UniqueName] = user.Username,
                     [ClaimTypes.Role] = user.Role.ToString()
                 }
             };

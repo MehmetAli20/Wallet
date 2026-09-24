@@ -14,7 +14,11 @@
         Guid Id,
         string Token,
         DateTimeOffset ExpiresAt,
-        int MaxUses);
+        int MaxUses)
+    {
+        public sealed override string ToString() =>
+            $"{nameof(IssuedTokenResponse)} {{ Kind = {Kind}, Id = {Id}, ExpiresAt = {ExpiresAt}, MaxUses = {MaxUses}, Token = *** }}";
+    }
 
     public record GroupPlaceholderResponse(Guid UserId, string DisplayName);
 }

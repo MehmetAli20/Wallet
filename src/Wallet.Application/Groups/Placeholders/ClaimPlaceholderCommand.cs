@@ -15,7 +15,11 @@ namespace Wallet.Application.Groups.Placeholders
         string Token,
         string Username,
         string Email,
-        string Password) : IRequest<Guid>;
+        string Password) : IRequest<Guid>
+    {
+        public sealed override string ToString() =>
+            $"{nameof(ClaimPlaceholderCommand)} {{ Username = {Username}, Token = ***, Email = ***, Password = *** }}";
+    }
 
     public class IssueClaimTokenCommandValidator : AbstractValidator<IssueClaimTokenCommand>
     {

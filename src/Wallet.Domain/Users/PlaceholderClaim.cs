@@ -3,7 +3,11 @@ using Wallet.Domain.Common;
 
 namespace Wallet.Domain.Users
 {
-    public sealed record IssuedPlaceholderClaim(PlaceholderClaim Claim, string Token);
+    public sealed record IssuedPlaceholderClaim(PlaceholderClaim Claim, string Token)
+    {
+        public override string ToString() =>
+            $"{nameof(IssuedPlaceholderClaim)} {{ ClaimId = {Claim.Id}, Token = *** }}";
+    }
 
     public class PlaceholderClaim
     {

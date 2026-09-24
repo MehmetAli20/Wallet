@@ -7,7 +7,7 @@ using Wallet.Domain.Users;
 
 namespace Wallet.Application.Users.Login
 {
-    public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthTokens>
+    public class LoginCommandHandler : IRequestHandler<LoginCommand, LoginResult>
     {
         private readonly IUserRepository _userRepository;
         private readonly ILoginAttemptRepository _loginAttempts;
@@ -35,7 +35,7 @@ namespace Wallet.Application.Users.Login
             _logger = logger;
         }
 
-        public async Task<AuthTokens> Handle(LoginCommand request, CancellationToken cancellationToken)
+        public async Task<LoginResult> Handle(LoginCommand request, CancellationToken cancellationToken)
         {
             var now = DateTimeOffset.UtcNow;
 
@@ -81,18 +81,31 @@ namespace Wallet.Application.Users.Login
             await _loginAttempts.AddAsync(
                 LoginAttempt.Success(Guid.NewGuid(), user!.Id, now, request.ClientIp), cancellationToken);
 
-            var refresh = RefreshToken.StartSession(Guid.NewGuid(), user.Id, now);
+            if (request.Purpose == LoginPurpose.AccessToken)
+            {
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            await _refreshTokens.AddAsync(refresh.RefreshToken, cancellationToken);
+                _logger.LogInformation("User {Username} logged in with an access token.", user.Username);
 
+                return new LoginResult(_tokenGenerator.GenerateToken(user), null);
+            }
+
+            if (!string.IsNullOrEmpty(request.PreviousSessionToken))
+            {
+                var previous = await _refreshTokens.GetByTokenAsync(request.PreviousSessionToken, cancellationToken);
+
+                if (previous is not null)
+                    await _refreshTokens.RevokeFamilyAsync(previous.FamilyId, now, cancellationToken);
+            }
+
+            var session = RefreshToken.StartSession(Guid.NewGuid(), user.Id, now);
+
+            await _refreshTokens.AddAsync(session.RefreshToken, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("User {Username} logged in.", user.Username);
+            _logger.LogInformation("User {Username} started a browser session.", user.Username);
 
-            return new AuthTokens(
-                _tokenGenerator.GenerateToken(user),
-                refresh.Token,
-                refresh.RefreshToken.ExpiresAt);
+            return new LoginResult(null, new IssuedSession(session.Token, session.RefreshToken.ExpiresAt));
         }
     }
 }

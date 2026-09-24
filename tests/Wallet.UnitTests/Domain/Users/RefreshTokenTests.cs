@@ -134,5 +134,55 @@ namespace Wallet.UnitTests.Domain.Users
 
             act.Should().Throw<InvalidOperationException>();
         }
+
+        [Fact]
+        public void AnUnusedToken_AuthenticatesRequestsOnlyForTheRequestLifetime()
+        {
+            var token = Start().RefreshToken;
+
+            token.CanAuthenticateRequest(T0 + RefreshToken.RequestLifetime - TimeSpan.FromMilliseconds(1)).Should().BeTrue();
+            token.CanAuthenticateRequest(T0 + RefreshToken.RequestLifetime).Should().BeFalse();
+        }
+
+        [Fact]
+        public void AUsedToken_AuthenticatesRequestsOnlyWithinTheReuseInterval()
+        {
+            var token = Start().RefreshToken;
+            var usedAt = T0.AddMinutes(5);
+            token.MarkUsed(usedAt);
+
+            token.CanAuthenticateRequest(usedAt + RefreshToken.ReuseInterval).Should().BeTrue();
+            token.CanAuthenticateRequest(usedAt + RefreshToken.ReuseInterval + TimeSpan.FromMilliseconds(1)).Should().BeFalse();
+        }
+
+        [Fact]
+        public void ARevokedToken_NeverAuthenticatesARequest()
+        {
+            var token = Start().RefreshToken;
+            token.Revoke(T0);
+
+            token.CanAuthenticateRequest(T0).Should().BeFalse();
+        }
+
+        [Fact]
+        public void TheSessionDeadline_CutsTheRequestLifetimeShort()
+        {
+            var first = Start().RefreshToken;
+
+            var day13 = T0.AddDays(13);
+            first.MarkUsed(day13);
+            var second = first.Successor(Guid.NewGuid(), day13).RefreshToken;
+
+            var day26 = T0.AddDays(26);
+            second.MarkUsed(day26);
+            var third = second.Successor(Guid.NewGuid(), day26).RefreshToken;
+
+            var fiveMinutesBeforeTheEnd = first.SessionExpiresAt.AddMinutes(-5);
+            third.MarkUsed(fiveMinutesBeforeTheEnd);
+            var last = third.Successor(Guid.NewGuid(), fiveMinutesBeforeTheEnd).RefreshToken;
+
+            last.CanAuthenticateRequest(first.SessionExpiresAt.AddTicks(-1)).Should().BeTrue();
+            last.CanAuthenticateRequest(first.SessionExpiresAt).Should().BeFalse();
+        }
     }
 }

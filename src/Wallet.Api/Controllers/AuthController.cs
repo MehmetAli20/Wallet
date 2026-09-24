@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Wallet.Api.Authentication;
 using Wallet.Api.Configuration;
 using Wallet.Api.Contracts.Users;
 using Wallet.Api.RateLimiting;
@@ -17,9 +18,6 @@ namespace Wallet.Api.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
-        private const string RefreshCookieName = "wallet_refresh";
-        private const string RefreshCookiePath = "/api/v1/auth";
-
         private readonly ISender _sender;
 
         public AuthController(ISender sender)
@@ -31,44 +29,57 @@ namespace Wallet.Api.Controllers
         [HttpPost("login")]
         public async Task<ActionResult<LoginResponse>> Login(LoginRequest loginRequest, CancellationToken cancellationToken)
         {
-            var tokens = await _sender.Send(
+            var result = await _sender.Send(
+                new LoginCommand(loginRequest.Username, loginRequest.Password, ClientIp, LoginPurpose.AccessToken),
+                cancellationToken);
+
+            return new LoginResponse(result.AccessToken!);
+        }
+
+        [AllowAnonymous]
+        [HttpPost("session")]
+        public async Task<IActionResult> StartSession(LoginRequest loginRequest, CancellationToken cancellationToken)
+        {
+            var result = await _sender.Send(
                 new LoginCommand(
                     loginRequest.Username,
                     loginRequest.Password,
-                    HttpContext.Connection.RemoteIpAddress?.ToString()),
+                    ClientIp,
+                    LoginPurpose.BrowserSession,
+                    Request.Cookies[SessionAuthentication.CookieName]),
                 cancellationToken);
 
-            SetRefreshCookie(tokens);
+            WriteSessionCookie(result.Session!);
 
-            return new LoginResponse(tokens.AccessToken);
+            return NoContent();
         }
 
         [AllowAnonymous]
-        [HttpPost("refresh")]
-        public async Task<ActionResult<LoginResponse>> Refresh(CancellationToken cancellationToken)
+        [HttpPost("session/refresh")]
+        public async Task<IActionResult> RefreshSession(CancellationToken cancellationToken)
         {
-            var refreshToken = Request.Cookies[RefreshCookieName];
+            var token = Request.Cookies[SessionAuthentication.CookieName];
 
-            if (string.IsNullOrEmpty(refreshToken))
+            if (string.IsNullOrEmpty(token))
                 return Unauthorized();
 
-            var tokens = await _sender.Send(new RefreshSessionCommand(refreshToken), cancellationToken);
+            var session = await _sender.Send(new RefreshSessionCommand(token), cancellationToken);
 
-            SetRefreshCookie(tokens);
+            WriteSessionCookie(session);
 
-            return new LoginResponse(tokens.AccessToken);
+            return NoContent();
         }
 
         [AllowAnonymous]
-        [HttpPost("logout")]
-        public async Task<IActionResult> Logout(CancellationToken cancellationToken)
+        [HttpDelete("session")]
+        public async Task<IActionResult> EndSession(CancellationToken cancellationToken)
         {
-            var refreshToken = Request.Cookies[RefreshCookieName];
+            var token = Request.Cookies[SessionAuthentication.CookieName];
 
-            if (!string.IsNullOrEmpty(refreshToken))
-                await _sender.Send(new LogoutCommand(refreshToken), cancellationToken);
+            if (!string.IsNullOrEmpty(token))
+                await _sender.Send(new LogoutCommand(token), cancellationToken);
 
-            Response.Cookies.Delete(RefreshCookieName, RefreshCookieOptions(expires: null));
+            Response.Cookies.Delete(SessionAuthentication.CookieName, SessionAuthentication.CookieOptions(null));
 
             return NoContent();
         }
@@ -83,19 +94,12 @@ namespace Wallet.Api.Controllers
             return StatusCode(StatusCodes.Status201Created, new RegisterResponse(userId));
         }
 
-        private void SetRefreshCookie(AuthTokens tokens) =>
-            Response.Cookies.Append(
-                RefreshCookieName,
-                tokens.RefreshToken,
-                RefreshCookieOptions(tokens.RefreshTokenExpiresAt));
+        private string? ClientIp => HttpContext.Connection.RemoteIpAddress?.ToString();
 
-        private static CookieOptions RefreshCookieOptions(DateTimeOffset? expires) => new()
-        {
-            HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Strict,
-            Path = RefreshCookiePath,
-            Expires = expires
-        };
+        private void WriteSessionCookie(IssuedSession session) =>
+            Response.Cookies.Append(
+                SessionAuthentication.CookieName,
+                session.Token,
+                SessionAuthentication.CookieOptions(session.ExpiresAt));
     }
 }

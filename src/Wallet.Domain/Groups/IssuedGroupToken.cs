@@ -13,5 +13,9 @@ namespace Wallet.Domain.Groups
         Guid Id,
         string Token,
         DateTimeOffset ExpiresAt,
-        int MaxUses);
+        int MaxUses)
+    {
+        public override string ToString() =>
+            $"{nameof(IssuedGroupToken)} {{ Kind = {Kind}, Id = {Id}, ExpiresAt = {ExpiresAt}, MaxUses = {MaxUses}, Token = *** }}";
+    }
 }
