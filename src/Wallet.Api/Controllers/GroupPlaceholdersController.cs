@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Wallet.Api.Contracts.Common;
 using Wallet.Api.Contracts.Placeholders;
-using Wallet.Application.Groups.Placeholders;
+using Wallet.Application.Groups.AddPlaceholder;
 
 namespace Wallet.Api.Controllers
 {

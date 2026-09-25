@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 using Wallet.Api.Contracts.Common;
 using Wallet.Api.Contracts.Expenses.Requests;
 using Wallet.Api.Contracts.Expenses.Responses;
-using Wallet.Application.Expenses.Recurring;
+using Wallet.Application.Expenses.CancelRecurringExpense;
+using Wallet.Application.Expenses.CreateRecurringExpense;
+using Wallet.Application.Expenses.GetMyRecurringExpenses;
 
 namespace Wallet.Api.Controllers
 {

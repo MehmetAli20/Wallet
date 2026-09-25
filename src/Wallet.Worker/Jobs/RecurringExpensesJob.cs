@@ -1,5 +1,5 @@
 using MediatR;
-using Wallet.Application.Expenses.Recurring;
+using Wallet.Application.Expenses.ProcessDueRecurringExpenses;
 
 namespace Wallet.Worker.Jobs
 {

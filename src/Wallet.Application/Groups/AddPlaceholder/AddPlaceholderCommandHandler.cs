@@ -1,4 +1,3 @@
-using FluentValidation;
 using MediatR;
 using Wallet.Application.Abstractions;
 using Wallet.Application.Abstractions.Groups;
@@ -6,19 +5,8 @@ using Wallet.Application.Abstractions.Users;
 using Wallet.Domain.Exceptions;
 using Wallet.Domain.Users;
 
-namespace Wallet.Application.Groups.Placeholders
+namespace Wallet.Application.Groups.AddPlaceholder
 {
-    public record AddPlaceholderCommand(Guid GroupId, string DisplayName) : IRequest<Guid>;
-
-    public class AddPlaceholderCommandValidator : AbstractValidator<AddPlaceholderCommand>
-    {
-        public AddPlaceholderCommandValidator()
-        {
-            RuleFor(x => x.GroupId).NotEmpty();
-            RuleFor(x => x.DisplayName).NotEmpty().MaximumLength(100);
-        }
-    }
-
     public class AddPlaceholderCommandHandler : IRequestHandler<AddPlaceholderCommand, Guid>
     {
         private readonly IGroupRepository _groups;

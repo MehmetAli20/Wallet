@@ -4,8 +4,6 @@ using System.Text;
 
 namespace Wallet.Application.Abstractions.Accounts
 {
-    public record IdempotencyLookup(bool Exists, string? Response);
-
     public interface IIdempotencyStore
     {
         Task<IdempotencyLookup> FindAsync(

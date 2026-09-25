@@ -1,6 +1,6 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
-using Wallet.Application.Expenses.Recurring;
+using Wallet.Application.Expenses.PostRecurringOccurrence;
 using Wallet.Domain.Expenses;
 using Wallet.Domain.Groups;
 using Wallet.Domain.Users;
