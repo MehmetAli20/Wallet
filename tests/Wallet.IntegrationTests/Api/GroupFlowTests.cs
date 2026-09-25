@@ -531,6 +531,24 @@ namespace Wallet.IntegrationTests.Api
         }
 
         [Fact]
+        public async Task AnInvitation_ShowsTheInvitersDisplayName()
+        {
+            var inviter = await _fixture.RegisterAsync();
+            var invitee = await _fixture.RegisterAsync();
+            var groupId = await CreateGroupAsync(inviter);
+
+            var invite = await inviter.Client.PostAsJsonAsync(
+                $"/api/v1/groups/{groupId}/members", new InviteToGroupRequest(invitee.Id));
+            invite.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            var invitation = (await invitee.Client.GetFromJsonAsync<List<InvitationResponse>>("/api/v1/invitations"))!
+                .Single(i => i.GroupId == groupId);
+
+            invitation.InvitedByUserId.Should().Be(inviter.Id);
+            invitation.InvitedByDisplayName.Should().Be(ApiFixture.DisplayName);
+        }
+
+        [Fact]
         public async Task YourOwnActionsAreNeverUnread()
         {
             var (groupId, members) = await GroupOfAsync(3);

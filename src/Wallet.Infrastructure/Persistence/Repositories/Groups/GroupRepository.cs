@@ -91,7 +91,7 @@ namespace Wallet.Infrastructure.Persistence.Repositories.Groups
                         g.Currency,
                         m.InvitedAt,
                         m.InvitedBy!.Value,
-                        _context.Users.Where(u => u.Id == m.InvitedBy).Select(u => u.Username).FirstOrDefault()!)))
+                        _context.Users.Where(u => u.Id == m.InvitedBy).Select(u => u.DisplayName).FirstOrDefault()!)))
                 .ToListAsync(cancellationToken);
         }
     }

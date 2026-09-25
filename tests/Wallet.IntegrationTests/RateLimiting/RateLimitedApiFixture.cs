@@ -67,7 +67,7 @@ namespace Wallet.IntegrationTests.RateLimiting
             var username = $"u{Guid.NewGuid():N}"[..20];
 
             await client.PostAsJsonAsync("/api/v1/auth/register",
-                new RegisterRequest(username, $"{username}@test.com", "password123"));
+                new RegisterRequest(username, $"{username}@test.com", "password123", "Test User"));
 
             var login = await client.PostAsJsonAsync("/api/v1/auth/login",
                 new LoginRequest(username, "password123"));

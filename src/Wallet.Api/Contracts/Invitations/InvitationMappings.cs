@@ -12,6 +12,6 @@ namespace Wallet.Api.Contracts.Invitations
                 invitation.Currency,
                 invitation.InvitedAt,
                 invitation.InvitedByUserId,
-                invitation.InvitedByUsername);
+                invitation.InvitedByDisplayName);
     }
 }

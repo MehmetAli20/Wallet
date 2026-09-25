@@ -32,11 +32,11 @@ namespace Wallet.Infrastructure.Persistence.Repositories.Users
         public async Task<bool> DisplayNameTakenInGroupAsync(
             Guid groupId, string displayName, CancellationToken cancellationToken = default)
         {
-            var normalized = displayName.Trim().ToLower();
+            var key = User.DisplayNameKey(displayName);
 
             return await _context.Users
                 .Where(u => _context.Groups.Any(g => g.Id == groupId && g.Members.Any(m => m.UserId == u.Id)))
-                .AnyAsync(u => u.DisplayName.ToLower() == normalized, cancellationToken);
+                .AnyAsync(u => u.DisplayName.ToLower() == key, cancellationToken);
         }
 
         public async Task<User?> GetByUsernameAsync(string username, CancellationToken cancellationToken = default)

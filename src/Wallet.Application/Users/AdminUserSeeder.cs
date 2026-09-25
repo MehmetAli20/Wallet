@@ -28,7 +28,7 @@ namespace Wallet.Application.Users
             var existingUser = await _users.GetByUsernameAsync(username, cancellationToken);
             if(existingUser is not null)
             {
-                _logger.LogInformation("Admin user '{Username}' already exists, skipping seed.", existingUser);
+                _logger.LogInformation("Admin user '{Username}' already exists, skipping seed.", username);
                 return;
             }
 
@@ -37,7 +37,8 @@ namespace Wallet.Application.Users
                 username: username,
                 email: email,
                 passwordHash: _passwordHasher.Hash(password),
-                role: UserRole.Admin);
+                role: UserRole.Admin,
+                displayName: "Administrator");
 
             await _users.AddAsync(admin, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);

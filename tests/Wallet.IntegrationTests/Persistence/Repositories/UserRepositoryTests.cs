@@ -24,7 +24,7 @@ public class UserRepositoryTests : IClassFixture<PostgresFixture>
             var repo = new UserRepository(context);
             var unitOfWork = new UnitOfWork(context);
 
-            await repo.AddAsync(new User(id, "Ahmet", "test0@test.com", "hash", UserRole.User));
+            await repo.AddAsync(new User(id, "Ahmet", "test0@test.com", "hash", UserRole.User, "Test User"));
             await unitOfWork.SaveChangesAsync();
         }
 
@@ -50,7 +50,7 @@ public class UserRepositoryTests : IClassFixture<PostgresFixture>
             var repo = new UserRepository(context);
             var unitOfWork = new UnitOfWork(context);
 
-            await repo.AddAsync(new User(id, "Mehmet", "test1@test.com", "hash", UserRole.User));
+            await repo.AddAsync(new User(id, "Mehmet", "test1@test.com", "hash", UserRole.User, "Test User"));
             await unitOfWork.SaveChangesAsync();
         }
 
@@ -72,7 +72,7 @@ public class UserRepositoryTests : IClassFixture<PostgresFixture>
             var repo = new UserRepository(context);
             var unitOfWork = new UnitOfWork(context);
 
-            await repo.AddAsync(new User(Guid.NewGuid(), "Zeynep", "test2@test.com", "hash", UserRole.User));
+            await repo.AddAsync(new User(Guid.NewGuid(), "Zeynep", "test2@test.com", "hash", UserRole.User, "Test User"));
             await unitOfWork.SaveChangesAsync();
         }
 
@@ -81,7 +81,7 @@ public class UserRepositoryTests : IClassFixture<PostgresFixture>
             var repo = new UserRepository(context);
             var unitOfWork = new UnitOfWork(context);
 
-            await repo.AddAsync(new User(Guid.NewGuid(), "zeynep", "test3@test.com", "hash", UserRole.User));
+            await repo.AddAsync(new User(Guid.NewGuid(), "zeynep", "test3@test.com", "hash", UserRole.User, "Test User"));
 
             var act = async () => await unitOfWork.SaveChangesAsync();
 
@@ -99,7 +99,7 @@ public class UserRepositoryTests : IClassFixture<PostgresFixture>
             var repo = new UserRepository(context);
             var unitOfWork = new UnitOfWork(context);
 
-            await repo.AddAsync(new User(id, "elif", "  Elif@Example.COM  ", "hash", UserRole.User));
+            await repo.AddAsync(new User(id, "elif", "  Elif@Example.COM  ", "hash", UserRole.User, "Test User"));
             await unitOfWork.SaveChangesAsync();
         }
 
@@ -122,7 +122,7 @@ public class UserRepositoryTests : IClassFixture<PostgresFixture>
             var repo = new UserRepository(context);
             var unitOfWork = new UnitOfWork(context);
 
-            await repo.AddAsync(new User(Guid.NewGuid(), "burak", "Burak@Example.com", "hash", UserRole.User));
+            await repo.AddAsync(new User(Guid.NewGuid(), "burak", "Burak@Example.com", "hash", UserRole.User, "Test User"));
             await unitOfWork.SaveChangesAsync();
         }
 
@@ -131,7 +131,7 @@ public class UserRepositoryTests : IClassFixture<PostgresFixture>
             var repo = new UserRepository(context);
             var unitOfWork = new UnitOfWork(context);
 
-            await repo.AddAsync(new User(Guid.NewGuid(), "burak2", "BURAK@example.COM", "hash", UserRole.User));
+            await repo.AddAsync(new User(Guid.NewGuid(), "burak2", "BURAK@example.COM", "hash", UserRole.User, "Test User"));
 
             var act = async () => await unitOfWork.SaveChangesAsync();
 

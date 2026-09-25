@@ -44,7 +44,7 @@ namespace Wallet.UnitTests.Domain.Users
         [Fact]
         public void PromotingARealUser_Throws()
         {
-            var user = new User(Guid.NewGuid(), "ali", "ali@test.com", "hash", UserRole.User);
+            var user = new User(Guid.NewGuid(), "ali", "ali@test.com", "hash", UserRole.User, "Test User");
 
             var act = () => user.Promote("ali2", "ali2@test.com", "hash2");
 
@@ -52,12 +52,12 @@ namespace Wallet.UnitTests.Domain.Users
         }
 
         [Fact]
-        public void ARegisteredUser_FallsBackToItsUsernameAsDisplayName()
+        public void ARegisteredUser_KeepsTheDisplayNameItChose()
         {
-            var user = new User(Guid.NewGuid(), "Ali", "ali@test.com", "hash", UserRole.User);
+            var user = new User(Guid.NewGuid(), "Ali", "ali@test.com", "hash", UserRole.User, "Ali Veli");
 
             user.Username.Should().Be("ali");
-            user.DisplayName.Should().Be("Ali");
+            user.DisplayName.Should().Be("Ali Veli");
         }
 
         [Fact]

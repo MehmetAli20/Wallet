@@ -31,7 +31,7 @@ namespace Wallet.Application.Groups.AddPlaceholder
             var group = await _groups.GetByIdAsync(request.GroupId, cancellationToken)
                 ?? throw new GroupNotFoundException(request.GroupId);
 
-            var displayName = request.DisplayName.Trim();
+            var displayName = User.NormalizeDisplayName(request.DisplayName);
 
             var taken = await _users.DisplayNameTakenInGroupAsync(
                 request.GroupId, displayName, cancellationToken);

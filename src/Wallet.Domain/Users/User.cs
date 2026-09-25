@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 
 namespace Wallet.Domain.Users
 {
     public class User
     {
+        public const int DisplayNameMaxLength = 100;
+
         public Guid Id { get; private set; }
         public string DisplayName { get; private set; }
         public string? Username { get; private set; }
@@ -19,12 +22,7 @@ namespace Wallet.Domain.Users
             DisplayName = null!;
         }
 
-        public User(Guid id, string username, string email, string passwordHash, UserRole role)
-            : this(id, username, email, passwordHash, role, displayName: null)
-        {
-        }
-
-        public User(Guid id, string username, string email, string passwordHash, UserRole role, string? displayName)
+        public User(Guid id, string username, string email, string passwordHash, UserRole role, string displayName)
         {
             if (id == Guid.Empty)
             {
@@ -48,7 +46,7 @@ namespace Wallet.Domain.Users
             Email = NormalizeEmail(email);
             PasswordHash = passwordHash;
             Role = role;
-            DisplayName = string.IsNullOrWhiteSpace(displayName) ? username.Trim() : displayName.Trim();
+            DisplayName = NormalizeDisplayName(displayName);
             IsPlaceholder = false;
         }
 
@@ -58,15 +56,11 @@ namespace Wallet.Domain.Users
             {
                 throw new ArgumentException("User Id cannot be empty.", nameof(id));
             }
-            if (string.IsNullOrWhiteSpace(displayName))
-            {
-                throw new ArgumentException("Display name cannot be null or whitespace.", nameof(displayName));
-            }
 
             return new User
             {
                 Id = id,
-                DisplayName = displayName.Trim(),
+                DisplayName = NormalizeDisplayName(displayName),
                 Role = UserRole.User,
                 IsPlaceholder = true
             };
@@ -99,12 +93,7 @@ namespace Wallet.Domain.Users
 
         public void Rename(string displayName)
         {
-            if (string.IsNullOrWhiteSpace(displayName))
-            {
-                throw new ArgumentException("Display name cannot be null or whitespace.", nameof(displayName));
-            }
-
-            DisplayName = displayName.Trim();
+            DisplayName = NormalizeDisplayName(displayName);
         }
 
         public static string NormalizeUsername(string username)
@@ -115,6 +104,81 @@ namespace Wallet.Domain.Users
         public static string NormalizeEmail(string email)
         {
             return email.Trim().ToLowerInvariant();
+        }
+
+        public static string NormalizeDisplayName(string displayName)
+        {
+            if (!TryNormalizeDisplayName(displayName, out var normalized))
+            {
+                throw new ArgumentException(
+                    "Display name is empty, too long or contains characters that are not allowed.", nameof(displayName));
+            }
+
+            return normalized;
+        }
+
+        public static string DisplayNameKey(string displayName)
+        {
+            return NormalizeDisplayName(displayName).ToLowerInvariant();
+        }
+
+        public static bool TryNormalizeDisplayName(string? displayName, out string normalized)
+        {
+            normalized = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(displayName))
+            {
+                return false;
+            }
+
+            string composed;
+
+            try
+            {
+                composed = displayName.Normalize(NormalizationForm.FormKC);
+            }
+            catch (ArgumentException)
+            {
+                return false;
+            }
+
+            var builder = new StringBuilder(composed.Length);
+            var pendingSpace = false;
+
+            foreach (var rune in composed.EnumerateRunes())
+            {
+                var category = Rune.GetUnicodeCategory(rune);
+
+                if (category is UnicodeCategory.Control
+                    or UnicodeCategory.Format
+                    or UnicodeCategory.PrivateUse
+                    or UnicodeCategory.OtherNotAssigned)
+                {
+                    return false;
+                }
+
+                if (Rune.IsWhiteSpace(rune))
+                {
+                    pendingSpace = builder.Length > 0;
+                    continue;
+                }
+
+                if (pendingSpace)
+                {
+                    builder.Append(' ');
+                    pendingSpace = false;
+                }
+
+                builder.Append(rune.ToString());
+            }
+
+            if (builder.Length is 0 or > DisplayNameMaxLength)
+            {
+                return false;
+            }
+
+            normalized = builder.ToString();
+            return true;
         }
     }
 }

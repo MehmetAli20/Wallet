@@ -7,5 +7,5 @@ namespace Wallet.Api.Contracts.Invitations.Responses
         string Currency,
         DateTimeOffset InvitedAt,
         Guid InvitedByUserId,
-        string InvitedByUsername);
+        string InvitedByDisplayName);
 }

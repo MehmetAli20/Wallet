@@ -15,6 +15,8 @@ namespace Wallet.IntegrationTests.Api
 
     public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
     {
+        public const string DisplayName = "Test User";
+
         private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:17").Build();
 
         public async Task InitializeAsync()
@@ -50,7 +52,7 @@ namespace Wallet.IntegrationTests.Api
             var username = $"u{Guid.NewGuid():N}"[..20];
 
             var register = await client.PostAsJsonAsync("/api/v1/auth/register",
-                new RegisterRequest(username, $"{username}@test.com", "password123"));
+                new RegisterRequest(username, $"{username}@test.com", "password123", DisplayName));
             register.StatusCode.Should().Be(HttpStatusCode.Created);
             var userId = (await register.Content.ReadFromJsonAsync<RegisterResponse>())!.UserId;
 

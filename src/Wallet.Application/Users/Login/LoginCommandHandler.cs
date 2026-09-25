@@ -73,7 +73,14 @@ namespace Wallet.Application.Users.Login
                     }
                 }
 
-                _logger.LogWarning("Failed login attempt for username {Username}.", request.Username);
+                if (isRealUser)
+                {
+                    _logger.LogWarning("Failed login attempt for user {UserId}.", user!.Id);
+                }
+                else
+                {
+                    _logger.LogWarning("Failed login attempt for an unknown username.");
+                }
 
                 throw new InvalidCredentialsException();
             }
@@ -85,7 +92,7 @@ namespace Wallet.Application.Users.Login
             {
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                _logger.LogInformation("User {Username} logged in with an access token.", user.Username);
+                _logger.LogInformation("User {UserId} logged in with an access token.", user.Id);
 
                 return new LoginResult(_tokenGenerator.GenerateToken(user), null);
             }
@@ -103,7 +110,7 @@ namespace Wallet.Application.Users.Login
             await _refreshTokens.AddAsync(session.RefreshToken, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("User {Username} started a browser session.", user.Username);
+            _logger.LogInformation("User {UserId} started a browser session.", user.Id);
 
             return new LoginResult(null, new IssuedSession(session.Token, session.RefreshToken.ExpiresAt));
         }

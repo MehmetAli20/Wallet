@@ -7,5 +7,5 @@ namespace Wallet.Domain.Groups
         string Currency,
         DateTimeOffset InvitedAt,
         Guid InvitedByUserId,
-        string InvitedByUsername);
+        string InvitedByDisplayName);
 }

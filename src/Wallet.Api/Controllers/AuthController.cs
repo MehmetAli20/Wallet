@@ -89,7 +89,9 @@ namespace Wallet.Api.Controllers
         [HttpPost("register")]
         public async Task<ActionResult<RegisterResponse>> Register(RegisterRequest registerRequest, CancellationToken cancellationToken)
         {
-            var userId = await _sender.Send(new RegisterCommand(registerRequest.Username, registerRequest.Email, registerRequest.Password), cancellationToken);
+            var userId = await _sender.Send(
+                new RegisterCommand(registerRequest.Username, registerRequest.Email, registerRequest.Password, registerRequest.DisplayName),
+                cancellationToken);
 
             return StatusCode(StatusCodes.Status201Created, new RegisterResponse(userId));
         }

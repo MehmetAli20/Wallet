@@ -164,7 +164,7 @@ namespace Wallet.UnitTests.Application
             Errors(new LoginCommandValidator(), ValidLogin() with { Password = "" })
                 .Should().Contain(nameof(LoginCommand.Password));
 
-        private static RegisterCommand ValidRegister() => new("ahmet", "ahmet@test.com", "password123");
+        private static RegisterCommand ValidRegister() => new("ahmet", "ahmet@test.com", "password123", "Ahmet Yılmaz");
 
         [Fact]
         public void Register_ValidCommand_Passes() =>
@@ -209,6 +209,14 @@ namespace Wallet.UnitTests.Application
         public void Register_PasswordAtBcryptLimit_Passes() =>
             IsValid(new RegisterCommandValidator(), ValidRegister() with { Password = new string('a', 72) })
                 .Should().BeTrue();
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("   ")]
+        [InlineData("‮temhA")]
+        public void Register_InvalidDisplayName_Fails(string displayName) =>
+            Errors(new RegisterCommandValidator(), ValidRegister() with { DisplayName = displayName })
+                .Should().Contain(nameof(RegisterCommand.DisplayName));
 
         [Fact]
         public void AcceptInvitation_ValidCommand_Passes() =>

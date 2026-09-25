@@ -206,7 +206,7 @@ namespace Wallet.IntegrationTests.Api
             var username = $"u{Guid.NewGuid():N}"[..20];
 
             var register = await NewClient().PostAsJsonAsync("/api/v1/auth/register",
-                new RegisterRequest(username, $"{username}@test.com", Password));
+                new RegisterRequest(username, $"{username}@test.com", Password, ApiFixture.DisplayName));
             register.StatusCode.Should().Be(HttpStatusCode.Created);
 
             return username;

@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Wallet.Domain.Users;
 
 namespace Wallet.Application.Users.Register
 {
@@ -25,6 +26,10 @@ namespace Wallet.Application.Users.Register
                 .NotEmpty()
                 .MinimumLength(8)
                 .MaximumLength(72);
+
+            RuleFor(x => x.DisplayName)
+                .Must(name => User.TryNormalizeDisplayName(name, out _))
+                .WithMessage($"Display name must be 1-{User.DisplayNameMaxLength} characters and cannot contain control or invisible characters.");
         }
     }
 }

@@ -41,8 +41,8 @@ namespace Wallet.Application.Users.Register
                 username: request.Username,
                 email: request.Email,
                 passwordHash: _passwordHasher.Hash(request.Password),
-                role: UserRole.User
-                );
+                role: UserRole.User,
+                displayName: request.DisplayName);
 
             await _userRepository.AddAsync(user, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
