@@ -38,7 +38,7 @@ namespace Wallet.Api.Controllers
             CancellationToken cancellationToken)
         {
             var id = await _sender.Send(new ClaimPlaceholderCommand(
-                request.Token, request.Username, request.Email, request.Password), cancellationToken);
+                request.Token, request.Email, request.Password), cancellationToken);
 
             return Ok(new CreatedResponse(id));
         }

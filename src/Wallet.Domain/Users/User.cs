@@ -11,7 +11,6 @@ namespace Wallet.Domain.Users
 
         public Guid Id { get; private set; }
         public string DisplayName { get; private set; }
-        public string? Username { get; private set; }
         public string? Email { get; private set; }
         public string? PasswordHash { get; private set; }
         public UserRole Role { get; private set; }
@@ -22,15 +21,11 @@ namespace Wallet.Domain.Users
             DisplayName = null!;
         }
 
-        public User(Guid id, string username, string email, string passwordHash, UserRole role, string displayName)
+        public User(Guid id, string email, string passwordHash, UserRole role, string displayName)
         {
             if (id == Guid.Empty)
             {
                 throw new ArgumentException("User Id cannot be empty.", nameof(id));
-            }
-            if (string.IsNullOrWhiteSpace(username))
-            {
-                throw new ArgumentException("Username cannot be null or whitespace.", nameof(username));
             }
             if (string.IsNullOrWhiteSpace(email))
             {
@@ -42,7 +37,6 @@ namespace Wallet.Domain.Users
             }
 
             Id = id;
-            Username = NormalizeUsername(username);
             Email = NormalizeEmail(email);
             PasswordHash = passwordHash;
             Role = role;
@@ -66,15 +60,11 @@ namespace Wallet.Domain.Users
             };
         }
 
-        public void Promote(string username, string email, string passwordHash)
+        public void Promote(string email, string passwordHash)
         {
             if (!IsPlaceholder)
             {
                 throw new InvalidOperationException($"User {Id} is not a placeholder.");
-            }
-            if (string.IsNullOrWhiteSpace(username))
-            {
-                throw new ArgumentException("Username cannot be null or whitespace.", nameof(username));
             }
             if (string.IsNullOrWhiteSpace(email))
             {
@@ -85,7 +75,6 @@ namespace Wallet.Domain.Users
                 throw new ArgumentException("Password hash cannot be null or whitespace.", nameof(passwordHash));
             }
 
-            Username = NormalizeUsername(username);
             Email = NormalizeEmail(email);
             PasswordHash = passwordHash;
             IsPlaceholder = false;
@@ -94,11 +83,6 @@ namespace Wallet.Domain.Users
         public void Rename(string displayName)
         {
             DisplayName = NormalizeDisplayName(displayName);
-        }
-
-        public static string NormalizeUsername(string username)
-        {
-            return username.Trim().ToLowerInvariant();
         }
 
         public static string NormalizeEmail(string email)

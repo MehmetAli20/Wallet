@@ -12,7 +12,6 @@ namespace Wallet.UnitTests.Domain.Users
 
             placeholder.IsPlaceholder.Should().BeTrue();
             placeholder.DisplayName.Should().Be("Mehmet");
-            placeholder.Username.Should().BeNull();
             placeholder.Email.Should().BeNull();
             placeholder.PasswordHash.Should().BeNull();
         }
@@ -31,11 +30,10 @@ namespace Wallet.UnitTests.Domain.Users
             var id = Guid.NewGuid();
             var placeholder = User.CreatePlaceholder(id, "Mehmet");
 
-            placeholder.Promote("mehmet_k", "Mehmet@Example.COM", "hash");
+            placeholder.Promote("Mehmet@Example.COM", "hash");
 
             placeholder.Id.Should().Be(id);
             placeholder.IsPlaceholder.Should().BeFalse();
-            placeholder.Username.Should().Be("mehmet_k");
             placeholder.Email.Should().Be("mehmet@example.com");
             placeholder.PasswordHash.Should().Be("hash");
             placeholder.DisplayName.Should().Be("Mehmet");
@@ -44,9 +42,9 @@ namespace Wallet.UnitTests.Domain.Users
         [Fact]
         public void PromotingARealUser_Throws()
         {
-            var user = new User(Guid.NewGuid(), "ali", "ali@test.com", "hash", UserRole.User, "Test User");
+            var user = new User(Guid.NewGuid(), "ali@test.com", "hash", UserRole.User, "Test User");
 
-            var act = () => user.Promote("ali2", "ali2@test.com", "hash2");
+            var act = () => user.Promote("ali2@test.com", "hash2");
 
             act.Should().Throw<InvalidOperationException>();
         }
@@ -54,9 +52,9 @@ namespace Wallet.UnitTests.Domain.Users
         [Fact]
         public void ARegisteredUser_KeepsTheDisplayNameItChose()
         {
-            var user = new User(Guid.NewGuid(), "Ali", "ali@test.com", "hash", UserRole.User, "Ali Veli");
+            var user = new User(Guid.NewGuid(), "Ali@Test.com", "hash", UserRole.User, "Ali Veli");
 
-            user.Username.Should().Be("ali");
+            user.Email.Should().Be("ali@test.com");
             user.DisplayName.Should().Be("Ali Veli");
         }
 

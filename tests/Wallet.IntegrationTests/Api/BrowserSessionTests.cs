@@ -42,9 +42,9 @@ namespace Wallet.IntegrationTests.Api
         [Fact]
         public async Task BearerLogin_OpensNoBrowserSession()
         {
-            var username = await RegisterAsync();
+            var email = await RegisterAsync();
 
-            var login = await NewClient().PostAsJsonAsync("/api/v1/auth/login", new LoginRequest(username, Password));
+            var login = await NewClient().PostAsJsonAsync("/api/v1/auth/login", new LoginRequest(email, Password));
 
             login.StatusCode.Should().Be(HttpStatusCode.OK);
             (await login.Content.ReadFromJsonAsync<LoginResponse>())!.Token.Should().NotBeNullOrEmpty();
@@ -140,10 +140,10 @@ namespace Wallet.IntegrationTests.Api
         [Fact]
         public async Task SigningInAgain_RevokesThePreviousSession()
         {
-            var username = await RegisterAsync();
-            var first = SessionFrom(await StartSessionAsync(username));
+            var email = await RegisterAsync();
+            var first = SessionFrom(await StartSessionAsync(email));
 
-            var again = await StartSessionAsync(username, first);
+            var again = await StartSessionAsync(email, first);
             again.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
             (await ListGroupsAsync(first)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -203,13 +203,13 @@ namespace Wallet.IntegrationTests.Api
 
         private async Task<string> RegisterAsync()
         {
-            var username = $"u{Guid.NewGuid():N}"[..20];
+            var email = $"u{Guid.NewGuid():N}@test.com";
 
             var register = await NewClient().PostAsJsonAsync("/api/v1/auth/register",
-                new RegisterRequest(username, $"{username}@test.com", Password, ApiFixture.DisplayName));
+                new RegisterRequest(email, Password, ApiFixture.DisplayName));
             register.StatusCode.Should().Be(HttpStatusCode.Created);
 
-            return username;
+            return email;
         }
 
         private async Task<string> SignInAsync()
@@ -220,9 +220,9 @@ namespace Wallet.IntegrationTests.Api
             return SessionFrom(started);
         }
 
-        private Task<HttpResponseMessage> StartSessionAsync(string username, string? session = null, bool withCsrf = true) =>
+        private Task<HttpResponseMessage> StartSessionAsync(string email, string? session = null, bool withCsrf = true) =>
             SendAsync(
-                new HttpRequestMessage(HttpMethod.Post, SessionPath) { Content = JsonContent.Create(new LoginRequest(username, Password)) },
+                new HttpRequestMessage(HttpMethod.Post, SessionPath) { Content = JsonContent.Create(new LoginRequest(email, Password)) },
                 session,
                 withCsrf);
 

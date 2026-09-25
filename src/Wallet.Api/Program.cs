@@ -141,11 +141,10 @@ if (app.Environment.IsDevelopment())
         options.RoutePrefix = "swagger";
     });
 
-    var seedUsername = builder.Configuration["Seed:AdminUsername"];
     var seedEmail = builder.Configuration["Seed:AdminEmail"];
     var seedPassword = builder.Configuration["Seed:AdminPassword"];
 
-    var seedValues = new[] { seedUsername, seedEmail, seedPassword };
+    var seedValues = new[] { seedEmail, seedPassword };
 
     if (seedValues.All(string.IsNullOrWhiteSpace))
     {
@@ -154,13 +153,13 @@ if (app.Environment.IsDevelopment())
     else if (seedValues.Any(string.IsNullOrWhiteSpace))
     {
         throw new InvalidOperationException(
-            "Admin seed is partially configured. Seed:AdminUsername, Seed:AdminEmail and Seed:AdminPassword must all be set, or none of them.");
+            "Admin seed is partially configured. Seed:AdminEmail and Seed:AdminPassword must both be set, or neither.");
     }
     else
     {
         using var scope = app.Services.CreateScope();
         var seeder = scope.ServiceProvider.GetRequiredService<AdminUserSeeder>();
-        await seeder.SeedAsync(seedUsername!, seedEmail!, seedPassword!);
+        await seeder.SeedAsync(seedEmail!, seedPassword!);
     }
 }
 

@@ -77,7 +77,7 @@ namespace Wallet.UnitTests.Domain.Users
         [Fact]
         public void EveryWayOfSettingAName_UsesTheSameRule()
         {
-            var registered = () => new User(Guid.NewGuid(), "ali", "ali@test.com", "hash", UserRole.User, "‮ilA");
+            var registered = () => new User(Guid.NewGuid(), "ali@test.com", "hash", UserRole.User, "‮ilA");
             var placeholder = () => User.CreatePlaceholder(Guid.NewGuid(), "‮ilA");
             var rename = () => User.CreatePlaceholder(Guid.NewGuid(), "Ali").Rename("‮ilA");
 

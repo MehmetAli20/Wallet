@@ -143,50 +143,32 @@ namespace Wallet.UnitTests.Application
             Errors(new CreateExpenseCommandValidator(), ValidExpense() with { OccurredAt = default })
                 .Should().Contain(nameof(CreateExpenseCommand.OccurredAt));
 
-        private static LoginCommand ValidLogin() => new("ahmet", "password123");
+        private static LoginCommand ValidLogin() => new("ahmet@test.com", "password123");
 
         [Fact]
         public void Login_ValidCommand_Passes() =>
             IsValid(new LoginCommandValidator(), ValidLogin()).Should().BeTrue();
 
         [Fact]
-        public void Login_EmptyUsername_Fails() =>
-            Errors(new LoginCommandValidator(), ValidLogin() with { Username = "" })
-                .Should().Contain(nameof(LoginCommand.Username));
+        public void Login_EmptyEmail_Fails() =>
+            Errors(new LoginCommandValidator(), ValidLogin() with { Email = "" })
+                .Should().Contain(nameof(LoginCommand.Email));
 
         [Fact]
-        public void Login_TooLongUsername_Fails() =>
-            Errors(new LoginCommandValidator(), ValidLogin() with { Username = new string('a', 51) })
-                .Should().Contain(nameof(LoginCommand.Username));
+        public void Login_TooLongEmail_Fails() =>
+            Errors(new LoginCommandValidator(), ValidLogin() with { Email = new string('a', 255) })
+                .Should().Contain(nameof(LoginCommand.Email));
 
         [Fact]
         public void Login_EmptyPassword_Fails() =>
             Errors(new LoginCommandValidator(), ValidLogin() with { Password = "" })
                 .Should().Contain(nameof(LoginCommand.Password));
 
-        private static RegisterCommand ValidRegister() => new("ahmet", "ahmet@test.com", "password123", "Ahmet Yılmaz");
+        private static RegisterCommand ValidRegister() => new("ahmet@test.com", "password123", "Ahmet Yılmaz");
 
         [Fact]
         public void Register_ValidCommand_Passes() =>
             IsValid(new RegisterCommandValidator(), ValidRegister()).Should().BeTrue();
-
-        [Theory]
-        [InlineData("ab")]
-        [InlineData("")]
-        [InlineData("ahmet bey")]
-        [InlineData("ahmet@")]
-        public void Register_InvalidUsername_Fails(string username) =>
-            Errors(new RegisterCommandValidator(), ValidRegister() with { Username = username })
-                .Should().Contain(nameof(RegisterCommand.Username));
-
-        [Theory]
-        [InlineData("ahmet.bey")]
-        [InlineData("ahmet_bey")]
-        [InlineData("ahmet-bey")]
-        [InlineData("ahmet123")]
-        public void Register_AllowedUsernameCharacters_Pass(string username) =>
-            IsValid(new RegisterCommandValidator(), ValidRegister() with { Username = username })
-                .Should().BeTrue();
 
         [Theory]
         [InlineData("")]

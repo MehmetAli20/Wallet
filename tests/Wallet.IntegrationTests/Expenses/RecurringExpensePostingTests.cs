@@ -153,7 +153,7 @@ namespace Wallet.IntegrationTests.Expenses
                 return;
 
             await new UserRepository(context).AddAsync(
-                new User(userId, $"u{userId:N}", $"{userId:N}@test.com", "hash", UserRole.User, "Test User"));
+                new User(userId, $"{userId:N}@test.com", "hash", UserRole.User, "Test User"));
 
             await new UnitOfWork(context).SaveChangesAsync();
         }

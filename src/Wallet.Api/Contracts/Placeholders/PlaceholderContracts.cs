@@ -8,9 +8,9 @@ namespace Wallet.Api.Contracts.Placeholders
             $"{nameof(ClaimTokenResponse)} {{ Token = *** }}";
     }
 
-    public record ClaimPlaceholderRequest(string Token, string Username, string Email, string Password)
+    public record ClaimPlaceholderRequest(string Token, string Email, string Password)
     {
         public sealed override string ToString() =>
-            $"{nameof(ClaimPlaceholderRequest)} {{ Username = {Username}, Token = ***, Email = ***, Password = *** }}";
+            $"{nameof(ClaimPlaceholderRequest)} {{ Token = ***, Email = ***, Password = *** }}";
     }
 }

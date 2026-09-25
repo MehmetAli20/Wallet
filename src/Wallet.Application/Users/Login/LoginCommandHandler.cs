@@ -39,7 +39,7 @@ namespace Wallet.Application.Users.Login
         {
             var now = DateTimeOffset.UtcNow;
 
-            var user = await _userRepository.GetByUsernameAsync(request.Username, cancellationToken);
+            var user = await _userRepository.GetByEmailAsync(request.Email, cancellationToken);
 
             var isRealUser = user is not null && !string.IsNullOrEmpty(user.PasswordHash);
 
@@ -79,7 +79,7 @@ namespace Wallet.Application.Users.Login
                 }
                 else
                 {
-                    _logger.LogWarning("Failed login attempt for an unknown username.");
+                    _logger.LogWarning("Failed login attempt for an unknown account.");
                 }
 
                 throw new InvalidCredentialsException();

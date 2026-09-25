@@ -64,13 +64,13 @@ namespace Wallet.IntegrationTests.RateLimiting
         public async Task<HttpClient> RegisterAsync()
         {
             var client = CreateClient();
-            var username = $"u{Guid.NewGuid():N}"[..20];
+            var email = $"u{Guid.NewGuid():N}@test.com";
 
             await client.PostAsJsonAsync("/api/v1/auth/register",
-                new RegisterRequest(username, $"{username}@test.com", "password123", "Test User"));
+                new RegisterRequest(email, "password123", "Test User"));
 
             var login = await client.PostAsJsonAsync("/api/v1/auth/login",
-                new LoginRequest(username, "password123"));
+                new LoginRequest(email, "password123"));
 
             var token = (await login.Content.ReadFromJsonAsync<LoginResponse>())!.Token;
 

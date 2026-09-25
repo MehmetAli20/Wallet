@@ -39,7 +39,7 @@ namespace Wallet.IntegrationTests.Transfers
         {
             await using var context = _fixture.CreateContext(TestCurrentUser.System);
             await new UserRepository(context).AddAsync(
-                new User(userId, $"u{userId:N}", $"{userId:N}@test.com", "hash", UserRole.User, "Test User"));
+                new User(userId, $"{userId:N}@test.com", "hash", UserRole.User, "Test User"));
             await new UnitOfWork(context).SaveChangesAsync();
         }
 

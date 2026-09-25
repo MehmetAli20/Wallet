@@ -829,14 +829,14 @@ namespace Wallet.IntegrationTests.Api
 
             var token = await IssueClaimTokenAsync(payer, mehmet);
 
-            var username = $"u{Guid.NewGuid():N}"[..20];
-            var claimed = await ClaimAsync(token, username, $"{username}@test.com", "password123");
+            var email = $"u{Guid.NewGuid():N}@test.com";
+            var claimed = await ClaimAsync(token, email, "password123");
 
             claimed.Should().Be(mehmet);
 
             var client = _fixture.CreateClient();
             var login = await client.PostAsJsonAsync(
-                "/api/v1/auth/login", new LoginRequest(username, "password123"));
+                "/api/v1/auth/login", new LoginRequest(email, "password123"));
 
             login.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -854,13 +854,11 @@ namespace Wallet.IntegrationTests.Api
             var mehmet = await AddPlaceholderAsync(members[0], groupId, "Mehmet");
             var token = await IssueClaimTokenAsync(members[0], mehmet);
 
-            var first = $"u{Guid.NewGuid():N}"[..20];
-            await ClaimAsync(token, first, $"{first}@test.com", "password123");
+            await ClaimAsync(token, $"u{Guid.NewGuid():N}@test.com", "password123");
 
-            var second = $"u{Guid.NewGuid():N}"[..20];
             var response = await _fixture.CreateClient().PostAsJsonAsync(
                 "/api/v1/placeholders/claim",
-                new ClaimPlaceholderRequest(token, second, $"{second}@test.com", "password123"));
+                new ClaimPlaceholderRequest(token, $"u{Guid.NewGuid():N}@test.com", "password123"));
 
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
@@ -1182,8 +1180,7 @@ namespace Wallet.IntegrationTests.Api
             issued.Token.Should().StartWith("wpc_");
             issued.MaxUses.Should().Be(1);
 
-            var username = $"u{Guid.NewGuid():N}"[..20];
-            var claimed = await ClaimAsync(issued.Token, username, $"{username}@test.com", "password123");
+            var claimed = await ClaimAsync(issued.Token, $"u{Guid.NewGuid():N}@test.com", "password123");
 
             claimed.Should().Be(mehmet);
         }
@@ -1197,15 +1194,15 @@ namespace Wallet.IntegrationTests.Api
             var first = await IssueInviteLinkAsync(members[0], groupId, placeholderId: mehmet);
             var second = await IssueInviteLinkAsync(members[0], groupId, placeholderId: mehmet);
 
-            var username = $"u{Guid.NewGuid():N}"[..20];
+            var email = $"u{Guid.NewGuid():N}@test.com";
 
             var withFirst = await _fixture.CreateClient().PostAsJsonAsync(
                 "/api/v1/placeholders/claim",
-                new ClaimPlaceholderRequest(first.Token, username, $"{username}@test.com", "password123"));
+                new ClaimPlaceholderRequest(first.Token, email, "password123"));
 
             withFirst.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
-            (await ClaimAsync(second.Token, username, $"{username}@test.com", "password123"))
+            (await ClaimAsync(second.Token, email, "password123"))
                 .Should().Be(mehmet);
         }
 
@@ -1452,11 +1449,11 @@ namespace Wallet.IntegrationTests.Api
             return (await response.Content.ReadFromJsonAsync<ClaimTokenResponse>())!.Token;
         }
 
-        private async Task<Guid> ClaimAsync(string token, string username, string email, string password)
+        private async Task<Guid> ClaimAsync(string token, string email, string password)
         {
             var response = await _fixture.CreateClient().PostAsJsonAsync(
                 "/api/v1/placeholders/claim",
-                new ClaimPlaceholderRequest(token, username, email, password));
+                new ClaimPlaceholderRequest(token, email, password));
 
             response.StatusCode.Should().Be(HttpStatusCode.OK);
 

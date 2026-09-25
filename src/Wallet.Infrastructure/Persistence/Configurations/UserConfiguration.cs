@@ -16,10 +16,6 @@ namespace Wallet.Infrastructure.Persistence.Configurations
             builder.Property(x => x.DisplayName)
                 .IsRequired()
                 .HasMaxLength(User.DisplayNameMaxLength);
-            builder.Property(x => x.Username)
-                .HasMaxLength(50);
-            builder.HasIndex(x => x.Username)
-                .IsUnique();
             builder.Property(x => x.PasswordHash)
                 .HasMaxLength(100);
             builder.Property(x => x.Role)

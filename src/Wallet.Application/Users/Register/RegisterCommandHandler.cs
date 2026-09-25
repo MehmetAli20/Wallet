@@ -24,12 +24,6 @@ namespace Wallet.Application.Users.Register
 
         public async Task<Guid> Handle(RegisterCommand request, CancellationToken cancellationToken = default)
         {
-            var existingUsername = await _userRepository.GetByUsernameAsync(request.Username, cancellationToken);
-            if(existingUsername is not null)
-            {
-                throw new UsernameAlreadyExistsException();
-            }
-            
             var existingEmail = await _userRepository.GetByEmailAsync(request.Email, cancellationToken);
             if(existingEmail is not null)
             {
@@ -38,7 +32,6 @@ namespace Wallet.Application.Users.Register
 
             var user = new User(
                 id: Guid.NewGuid(),
-                username: request.Username,
                 email: request.Email,
                 passwordHash: _passwordHasher.Hash(request.Password),
                 role: UserRole.User,

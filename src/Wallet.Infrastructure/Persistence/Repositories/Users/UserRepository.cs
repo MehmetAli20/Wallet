@@ -39,12 +39,6 @@ namespace Wallet.Infrastructure.Persistence.Repositories.Users
                 .AnyAsync(u => u.DisplayName.ToLower() == key, cancellationToken);
         }
 
-        public async Task<User?> GetByUsernameAsync(string username, CancellationToken cancellationToken = default)
-        {
-            var normalizedUsername = User.NormalizeUsername(username);
-            return await _context.Users.FirstOrDefaultAsync(u => u.Username == normalizedUsername, cancellationToken);
-        }
-
         public async Task AddAsync(User user, CancellationToken cancellationToken = default)
         {
             await _context.Users.AddAsync(user, cancellationToken);

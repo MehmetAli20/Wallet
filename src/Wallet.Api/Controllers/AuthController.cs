@@ -30,7 +30,7 @@ namespace Wallet.Api.Controllers
         public async Task<ActionResult<LoginResponse>> Login(LoginRequest loginRequest, CancellationToken cancellationToken)
         {
             var result = await _sender.Send(
-                new LoginCommand(loginRequest.Username, loginRequest.Password, ClientIp, LoginPurpose.AccessToken),
+                new LoginCommand(loginRequest.Email, loginRequest.Password, ClientIp, LoginPurpose.AccessToken),
                 cancellationToken);
 
             return new LoginResponse(result.AccessToken!);
@@ -42,7 +42,7 @@ namespace Wallet.Api.Controllers
         {
             var result = await _sender.Send(
                 new LoginCommand(
-                    loginRequest.Username,
+                    loginRequest.Email,
                     loginRequest.Password,
                     ClientIp,
                     LoginPurpose.BrowserSession,
@@ -90,7 +90,7 @@ namespace Wallet.Api.Controllers
         public async Task<ActionResult<RegisterResponse>> Register(RegisterRequest registerRequest, CancellationToken cancellationToken)
         {
             var userId = await _sender.Send(
-                new RegisterCommand(registerRequest.Username, registerRequest.Email, registerRequest.Password, registerRequest.DisplayName),
+                new RegisterCommand(registerRequest.Email, registerRequest.Password, registerRequest.DisplayName),
                 cancellationToken);
 
             return StatusCode(StatusCodes.Status201Created, new RegisterResponse(userId));

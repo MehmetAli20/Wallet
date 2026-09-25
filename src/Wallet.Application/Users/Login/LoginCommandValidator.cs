@@ -9,7 +9,7 @@ namespace Wallet.Application.Users.Login
     {
         public LoginCommandValidator()
         {
-            RuleFor(x => x.Username).NotEmpty().MaximumLength(50);
+            RuleFor(x => x.Email).NotEmpty().MaximumLength(254);
             RuleFor(x => x.Password).NotEmpty();
             RuleFor(x => x.Purpose).IsInEnum();
         }

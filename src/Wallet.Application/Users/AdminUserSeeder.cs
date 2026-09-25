@@ -23,18 +23,17 @@ namespace Wallet.Application.Users
             _passwordHasher = passwordHasher;
         }
 
-        public async Task SeedAsync(string username, string email, string password, CancellationToken cancellationToken = default)
+        public async Task SeedAsync(string email, string password, CancellationToken cancellationToken = default)
         {
-            var existingUser = await _users.GetByUsernameAsync(username, cancellationToken);
+            var existingUser = await _users.GetByEmailAsync(email, cancellationToken);
             if(existingUser is not null)
             {
-                _logger.LogInformation("Admin user '{Username}' already exists, skipping seed.", username);
+                _logger.LogInformation("Admin user already exists, skipping seed.");
                 return;
             }
 
             var admin = new User(
                 id: Guid.NewGuid(),
-                username: username,
                 email: email,
                 passwordHash: _passwordHasher.Hash(password),
                 role: UserRole.Admin,
@@ -43,7 +42,7 @@ namespace Wallet.Application.Users
             await _users.AddAsync(admin, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Admin user '{Username}' created.", admin.Username);
+            _logger.LogInformation("Admin user {UserId} created.", admin.Id);
         }
     }
 }

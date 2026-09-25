@@ -82,10 +82,10 @@ namespace Wallet.IntegrationTests.RateLimiting
 
         private static Task<HttpResponseMessage> RegisterAsync(HttpClient client)
         {
-            var username = $"u{Guid.NewGuid():N}"[..20];
+            var email = $"u{Guid.NewGuid():N}@test.com";
 
             return client.PostAsJsonAsync("/api/v1/auth/register",
-                new RegisterRequest(username, $"{username}@test.com", "password123", "Test User"));
+                new RegisterRequest(email, "password123", "Test User"));
         }
 
         [Fact]
@@ -103,7 +103,7 @@ namespace Wallet.IntegrationTests.RateLimiting
             denied.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
 
             var login = await client.PostAsJsonAsync("/api/v1/auth/login",
-                new LoginRequest("nobody", "wrong-password"));
+                new LoginRequest("nobody@test.com", "wrong-password"));
 
             login.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         }
@@ -123,13 +123,13 @@ namespace Wallet.IntegrationTests.RateLimiting
             for (var i = 0; i < 3; i++)
             {
                 var attempt = await client.PostAsJsonAsync("/api/v1/auth/login",
-                    new LoginRequest("nobody", "wrong-password"));
+                    new LoginRequest("nobody@test.com", "wrong-password"));
 
                 attempt.StatusCode.Should().NotBe(HttpStatusCode.TooManyRequests);
             }
 
             var denied = await client.PostAsJsonAsync("/api/v1/auth/login",
-                new LoginRequest("nobody", "wrong-password"));
+                new LoginRequest("nobody@test.com", "wrong-password"));
 
             denied.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
             denied.Headers.RetryAfter.Should().NotBeNull();

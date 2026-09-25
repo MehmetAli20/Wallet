@@ -146,7 +146,7 @@ Register, log in, and paste the returned token into Swagger's **Authorize** box:
 ```bash
 curl -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"username":"ayse","email":"ayse@example.com","password":"password123"}'
+  -d '{"email":"ayse@example.com","password":"password123","displayName":"Ayşe"}'
 ```
 
 ## Running the tests
@@ -164,7 +164,7 @@ dotnet test Wallet.slnx
 
 | Area | Endpoints |
 |---|---|
-| Auth | `POST /api/v1/auth/register`, `POST /api/v1/auth/login` |
+| Auth | `POST /api/v1/auth/register`, `POST /api/v1/auth/login` (bearer), `POST`/`DELETE /api/v1/auth/session`, `POST /api/v1/auth/session/refresh` (browser session) |
 | Groups | `POST /api/v1/groups`, `GET /api/v1/groups`, `POST /api/v1/groups/pairs`, `POST /api/v1/groups/{id}/members`, `GET /api/v1/groups/{id}/balance` |
 | Invitations | `GET /api/v1/invitations`, `POST /api/v1/invitations/{id}/accept`, `DELETE /api/v1/invitations/{id}` |
 | Expenses | `POST /api/v1/expenses`, `GET /api/v1/groups/{id}/expenses`, `POST /api/v1/expenses/{id}/reversal`, `POST /api/v1/expenses/{id}/revisions` |

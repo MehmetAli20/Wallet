@@ -6,7 +6,7 @@ namespace Wallet.Application.Abstractions.Exceptions
 {
     public class InvalidCredentialsException : Exception
     {
-        public InvalidCredentialsException() : base("Invalid username or password.")
+        public InvalidCredentialsException() : base("Invalid email or password.")
         {
         }
     }

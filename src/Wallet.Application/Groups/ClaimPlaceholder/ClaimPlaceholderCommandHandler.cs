@@ -37,14 +37,10 @@ namespace Wallet.Application.Groups.ClaimPlaceholder
             var placeholder = await _users.GetByIdAsync(claim.PlaceholderUserId, cancellationToken)
                 ?? throw new InvalidGroupOperationException("Placeholder not found.");
 
-            if (await _users.GetByUsernameAsync(request.Username, cancellationToken) is not null)
-                throw new UsernameAlreadyExistsException();
-
             if (await _users.GetByEmailAsync(request.Email, cancellationToken) is not null)
                 throw new EmailAlreadyExistsException();
 
-            placeholder.Promote(
-                request.Username, request.Email, _passwordHasher.Hash(request.Password));
+            placeholder.Promote(request.Email, _passwordHasher.Hash(request.Password));
 
             claim.Use(DateTimeOffset.UtcNow);
 

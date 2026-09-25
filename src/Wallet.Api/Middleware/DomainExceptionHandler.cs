@@ -34,7 +34,6 @@ namespace Wallet.Api.Middleware
                 ArgumentException => (StatusCodes.Status400BadRequest, "Invalid input"),
                 ConcurrencyConflictException => (StatusCodes.Status409Conflict, "Concurrent modification"),
                 InvalidCredentialsException => (StatusCodes.Status401Unauthorized, "Invalid credentials"),
-                UsernameAlreadyExistsException => (StatusCodes.Status409Conflict, "Username already exists"),
                 UniqueConstraintViolationException => (StatusCodes.Status409Conflict, "Conflict"),
                 IdempotentResponseUnavailableException => (StatusCodes.Status409Conflict, "Idempotent response unavailable"),
                 IdempotencyKeyReuseException => (StatusCodes.Status409Conflict, "Idempotency key reuse"),
