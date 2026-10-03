@@ -774,7 +774,30 @@ namespace Wallet.IntegrationTests.Api
             var response = await members[0].Client.PostAsJsonAsync(
                 $"/api/v1/groups/{groupId}/placeholders", new AddPlaceholderRequest("  mehmet "));
 
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        }
+
+        [Fact]
+        public async Task RenamingToAGroupmatesName_IsRejected_ButOnlyInsideYourGroups()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+            var outsider = await _fixture.RegisterAsync();
+            await AddPlaceholderAsync(members[0], groupId, "Mehmet");
+
+            (await RenameAsync(members[0], "Ayşe Yılmaz")).StatusCode.Should().Be(HttpStatusCode.OK);
+
+            (await RenameAsync(members[1], "ayşe yılmaz")).StatusCode.Should().Be(HttpStatusCode.Conflict);
+            (await RenameAsync(members[1], "mehmet")).StatusCode.Should().Be(HttpStatusCode.Conflict);
+            (await RenameAsync(outsider, "Ayşe Yılmaz")).StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        [Fact]
+        public async Task ChangingOnlyTheCaseOfYourName_IsAllowed_EvenIfAGroupmateSharesIt()
+        {
+            var (_, members) = await GroupOfAsync(2);
+
+            (await RenameAsync(members[1], ApiFixture.DisplayName.ToUpperInvariant()))
+                .StatusCode.Should().Be(HttpStatusCode.OK);
         }
 
         [Fact]
@@ -1438,6 +1461,9 @@ namespace Wallet.IntegrationTests.Api
 
             return (await response.Content.ReadFromJsonAsync<CreatedResponse>())!.Id;
         }
+
+        private static Task<HttpResponseMessage> RenameAsync(TestUser user, string displayName) =>
+            user.Client.PatchAsJsonAsync("/api/v1/users/me", new UpdateCurrentUserRequest(displayName));
 
         private static async Task<string> IssueClaimTokenAsync(TestUser member, Guid placeholderId)
         {

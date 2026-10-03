@@ -6,6 +6,7 @@ using Wallet.Application.Groups.InviteToGroup;
 using Wallet.Application.Transfers.TransferMoney;
 using Wallet.Application.Users.Login;
 using Wallet.Application.Users.Register;
+using Wallet.Application.Users.RenameCurrentUser;
 using Wallet.Application.Invitations.AcceptInvitation;
 using Wallet.Application.Invitations.DeclineInvitation;
 
@@ -223,5 +224,17 @@ namespace Wallet.UnitTests.Application
             new DeclineInvitationCommandValidator()
                 .Validate(new DeclineInvitationCommand(Guid.Empty))
                 .IsValid.Should().BeFalse();
+
+        [Fact]
+        public void RenameCurrentUser_ValidName_Passes() =>
+            IsValid(new RenameCurrentUserCommandValidator(), new RenameCurrentUserCommand("Ayşe Yılmaz")).Should().BeTrue();
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("   ")]
+        [InlineData("‮eşyA")]
+        public void RenameCurrentUser_InvalidName_Fails(string displayName) =>
+            Errors(new RenameCurrentUserCommandValidator(), new RenameCurrentUserCommand(displayName))
+                .Should().Contain(nameof(RenameCurrentUserCommand.DisplayName));
     }
 }

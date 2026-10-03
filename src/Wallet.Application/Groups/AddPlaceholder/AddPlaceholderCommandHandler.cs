@@ -1,5 +1,6 @@
 using MediatR;
 using Wallet.Application.Abstractions;
+using Wallet.Application.Abstractions.Exceptions;
 using Wallet.Application.Abstractions.Groups;
 using Wallet.Application.Abstractions.Users;
 using Wallet.Domain.Exceptions;
@@ -37,8 +38,7 @@ namespace Wallet.Application.Groups.AddPlaceholder
                 request.GroupId, displayName, cancellationToken);
 
             if (taken)
-                throw new InvalidGroupOperationException(
-                    $"'{displayName}' is already used in this group. Pick a name that tells them apart.");
+                throw new DisplayNameTakenException(displayName);
 
             var placeholder = User.CreatePlaceholder(Guid.NewGuid(), displayName);
             await _users.AddAsync(placeholder, cancellationToken);

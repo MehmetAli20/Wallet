@@ -58,6 +58,17 @@ namespace Wallet.IntegrationTests.Api
         }
 
         [Fact]
+        public async Task TheSessionCookie_IdentifiesTheCallerAtMe()
+        {
+            var session = await SignInAsync();
+
+            var me = await SendAsync(new HttpRequestMessage(HttpMethod.Get, "/api/v1/users/me"), session, withCsrf: false);
+
+            me.StatusCode.Should().Be(HttpStatusCode.OK);
+            (await me.Content.ReadFromJsonAsync<CurrentUserResponse>())!.DisplayName.Should().Be(ApiFixture.DisplayName);
+        }
+
+        [Fact]
         public async Task Refresh_RotatesTheCookie_AndTheNewOneAuthenticates()
         {
             var first = await SignInAsync();

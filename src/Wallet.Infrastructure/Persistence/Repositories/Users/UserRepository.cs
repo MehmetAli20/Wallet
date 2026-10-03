@@ -39,6 +39,18 @@ namespace Wallet.Infrastructure.Persistence.Repositories.Users
                 .AnyAsync(u => u.DisplayName.ToLower() == key, cancellationToken);
         }
 
+        public async Task<bool> DisplayNameTakenByGroupmateAsync(
+            Guid userId, string displayName, CancellationToken cancellationToken = default)
+        {
+            var key = User.DisplayNameKey(displayName);
+
+            return await _context.Users
+                .Where(u => u.Id != userId)
+                .Where(u => _context.Groups.Any(g =>
+                    g.Members.Any(m => m.UserId == userId) && g.Members.Any(m => m.UserId == u.Id)))
+                .AnyAsync(u => u.DisplayName.ToLower() == key, cancellationToken);
+        }
+
         public async Task AddAsync(User user, CancellationToken cancellationToken = default)
         {
             await _context.Users.AddAsync(user, cancellationToken);
