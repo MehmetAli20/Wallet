@@ -7,7 +7,7 @@ using Wallet.Domain.Groups;
 
 namespace Wallet.Application.Groups.JoinGroupByLink
 {
-    public class JoinGroupByLinkCommandHandler : IRequestHandler<JoinGroupByLinkCommand, Group>
+    public class JoinGroupByLinkCommandHandler : IRequestHandler<JoinGroupByLinkCommand, GroupView>
     {
         private readonly IGroupRepository _groups;
         private readonly IGroupInviteLinkRepository _links;
@@ -26,7 +26,7 @@ namespace Wallet.Application.Groups.JoinGroupByLink
             _currentUser = currentUser;
         }
 
-        public async Task<Group> Handle(JoinGroupByLinkCommand request, CancellationToken cancellationToken)
+        public async Task<GroupView> Handle(JoinGroupByLinkCommand request, CancellationToken cancellationToken)
         {
             var now = DateTimeOffset.UtcNow;
 
@@ -41,7 +41,8 @@ namespace Wallet.Application.Groups.JoinGroupByLink
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            return group;
+            return await _groups.GetGroupViewAsync(group.Id, cancellationToken)
+                ?? throw new GroupNotFoundException(group.Id);
         }
     }
 }

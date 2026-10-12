@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Wallet.Application.Abstractions.Groups;
+using Wallet.Application.Groups;
 using Wallet.Domain.Common;
 using Wallet.Domain.Groups;
 
@@ -31,13 +32,26 @@ namespace Wallet.Infrastructure.Persistence.Repositories.Groups
                 .FirstOrDefaultAsync(g => g.PairKey == pairKey && g.Currency == normalized, cancellationToken);
         }
 
-        public async Task<IReadOnlyList<Group>> GetAllAsync(CancellationToken cancellationToken = default)
-        {
-            return await _context.Groups
-                .Include(g => g.Members)
-                .OrderBy(g => g.Name)
-                .ToListAsync(cancellationToken);
-        }
+        public async Task<IReadOnlyList<GroupView>> GetMyGroupViewsAsync(CancellationToken cancellationToken = default) =>
+            await Views(_context.Groups.OrderBy(g => g.Name)).ToListAsync(cancellationToken);
+
+        public async Task<GroupView?> GetGroupViewAsync(Guid groupId, CancellationToken cancellationToken = default) =>
+            await Views(_context.Groups.Where(g => g.Id == groupId)).SingleOrDefaultAsync(cancellationToken);
+
+        private IQueryable<GroupView> Views(IQueryable<Group> groups) =>
+            groups.Select(g => new GroupView(
+                g.Id,
+                g.Kind,
+                g.Name,
+                g.Currency,
+                g.Members
+                    .Select(m => new GroupMemberView(
+                        m.UserId,
+                        _context.Users.Where(u => u.Id == m.UserId).Select(u => u.DisplayName).First(),
+                        _context.Users.Where(u => u.Id == m.UserId).Select(u => u.IsPlaceholder).First(),
+                        m.Role,
+                        m.Status))
+                    .ToList()));
 
         public async Task<IReadOnlyList<Group>> GetAllForPartyAsync(Guid partyId, CancellationToken cancellationToken = default)
         {

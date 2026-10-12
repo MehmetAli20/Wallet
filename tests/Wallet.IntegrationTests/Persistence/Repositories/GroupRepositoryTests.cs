@@ -20,6 +20,17 @@ namespace Wallet.IntegrationTests.Persistence.Repositories
             await new UnitOfWork(context).SaveChangesAsync();
         }
 
+        private async Task AddUsersAsync(params Guid[] ids)
+        {
+            await using var context = _fixture.CreateContext(TestCurrentUser.System);
+            var users = new UserRepository(context);
+
+            foreach (var id in ids)
+                await users.AddAsync(new User(id, $"{id:N}@test.com", "hash", UserRole.User, "Test User"));
+
+            await new UnitOfWork(context).SaveChangesAsync();
+        }
+
         [Fact]
         public async Task NamedGroup_RoundTripsWithItsMembers()
         {
@@ -127,6 +138,7 @@ namespace Wallet.IntegrationTests.Persistence.Repositories
             var member = Guid.NewGuid();
             var stranger = Guid.NewGuid();
             var invitedOnly = Guid.NewGuid();
+            await AddUsersAsync(member, stranger, invitedOnly);
 
             var mine = Guid.NewGuid();
             var group = Group.CreateNamedGroup(mine, "Mine", "USD", member);
@@ -137,13 +149,13 @@ namespace Wallet.IntegrationTests.Persistence.Repositories
 
             await using (var context = _fixture.CreateContext(TestCurrentUser.For(member)))
             {
-                var groups = await new GroupRepository(context).GetAllAsync();
+                var groups = await new GroupRepository(context).GetMyGroupViewsAsync();
                 groups.Should().ContainSingle(g => g.Id == mine);
             }
 
             await using (var context = _fixture.CreateContext(TestCurrentUser.For(invitedOnly)))
             {
-                var groups = await new GroupRepository(context).GetAllAsync();
+                var groups = await new GroupRepository(context).GetMyGroupViewsAsync();
                 groups.Should().BeEmpty();
             }
         }

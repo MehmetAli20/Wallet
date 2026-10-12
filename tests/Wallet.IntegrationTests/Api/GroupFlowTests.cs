@@ -1006,7 +1006,8 @@ namespace Wallet.IntegrationTests.Api
             var group = (await joined.Content.ReadFromJsonAsync<GroupResponse>())!;
 
             group.Id.Should().Be(groupId);
-            group.Members.Should().ContainSingle(m => m.UserId == outsider.Id && m.Status == "Active");
+            group.Members.Should().ContainSingle(m =>
+                m.UserId == outsider.Id && m.Status == "Active" && m.DisplayName == ApiFixture.DisplayName);
 
             (await GroupsAsync(outsider)).Should().Contain(g => g.Id == groupId);
         }
@@ -1250,6 +1251,7 @@ namespace Wallet.IntegrationTests.Api
         {
             var (groupId, members) = await GroupOfAsync(3);
             var leaver = members[2];
+            (await RenameAsync(leaver, "Leyla")).StatusCode.Should().Be(HttpStatusCode.OK);
 
             var response = await RemoveMemberAsync(leaver, groupId, leaver.Id);
             response.StatusCode.Should().Be(HttpStatusCode.NoContent);
@@ -1258,7 +1260,26 @@ namespace Wallet.IntegrationTests.Api
 
             var seenByAdmin = (await GroupsAsync(members[0])).Single(g => g.Id == groupId);
 
-            seenByAdmin.Members.Single(m => m.UserId == leaver.Id).Status.Should().Be("Removed");
+            var removed = seenByAdmin.Members.Single(m => m.UserId == leaver.Id);
+            removed.Status.Should().Be("Removed");
+            removed.DisplayName.Should().Be("Leyla");
+        }
+
+        [Fact]
+        public async Task TheGroupList_ShowsEveryMembersCurrentName_AndWhoIsAPlaceholder()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+            var mehmet = await AddPlaceholderAsync(members[0], groupId, "Mehmet");
+            (await RenameAsync(members[1], "Burak Kaya")).StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var group = (await GroupsAsync(members[0])).Single(g => g.Id == groupId);
+
+            group.Members.Should().ContainSingle(m =>
+                m.UserId == members[0].Id && m.DisplayName == ApiFixture.DisplayName && !m.IsPlaceholder);
+            group.Members.Should().ContainSingle(m =>
+                m.UserId == members[1].Id && m.DisplayName == "Burak Kaya" && !m.IsPlaceholder);
+            group.Members.Should().ContainSingle(m =>
+                m.UserId == mehmet && m.DisplayName == "Mehmet" && m.IsPlaceholder);
         }
 
         [Fact]

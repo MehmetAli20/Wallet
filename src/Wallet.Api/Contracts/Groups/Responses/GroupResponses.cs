@@ -1,6 +1,6 @@
 ﻿namespace Wallet.Api.Contracts.Groups.Responses
 {
-    public record GroupMemberResponse(Guid UserId, string Role, string Status);
+    public record GroupMemberResponse(Guid UserId, string DisplayName, bool IsPlaceholder, string Role, string Status);
 
     public record GroupResponse(
         Guid Id,
