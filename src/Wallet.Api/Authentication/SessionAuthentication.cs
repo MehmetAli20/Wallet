@@ -1,3 +1,5 @@
+using Wallet.Application.Users;
+
 namespace Wallet.Api.Authentication
 {
     public static class SessionAuthentication
@@ -6,7 +8,7 @@ namespace Wallet.Api.Authentication
         public const string SelectorScheme = "BearerOrSession";
         public const string CookieName = "__Host-wallet_session";
         public const string CsrfHeader = "X-CSRF";
-        public const string FamilyClaim = "sid";
+        public const string FamilyClaim = SessionClaims.Family;
 
         public static readonly PathString EndpointPath = new("/api/v1/auth/session");
 

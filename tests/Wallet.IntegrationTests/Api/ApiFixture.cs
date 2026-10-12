@@ -59,7 +59,7 @@ namespace Wallet.IntegrationTests.Api
             var login = await client.PostAsJsonAsync("/api/v1/auth/login",
                 new LoginRequest(email, "password123"));
             login.StatusCode.Should().Be(HttpStatusCode.OK);
-            var token = (await login.Content.ReadFromJsonAsync<LoginResponse>())!.Token;
+            var token = (await login.Content.ReadFromJsonAsync<TokenResponse>())!.AccessToken;
 
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 

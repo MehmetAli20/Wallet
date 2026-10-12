@@ -115,6 +115,24 @@ builder.Services
             IssuerSigningKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(jwtOptions.SigningKey)),
             ClockSkew = TimeSpan.FromSeconds(30)
         };
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var family = context.Principal?.FindFirst(SessionClaims.Family)?.Value;
+
+                if (!Guid.TryParse(family, out var familyId))
+                {
+                    context.Fail("The access token is not bound to a session.");
+                    return;
+                }
+
+                var refreshTokens = context.HttpContext.RequestServices.GetRequiredService<IRefreshTokenRepository>();
+
+                if (await refreshTokens.IsFamilyRevokedAsync(familyId, context.HttpContext.RequestAborted))
+                    context.Fail("The session has ended.");
+            }
+        };
     })
     .AddScheme<AuthenticationSchemeOptions, SessionAuthenticationHandler>(SessionAuthentication.Scheme, _ => { });
 

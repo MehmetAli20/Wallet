@@ -25,13 +25,25 @@ namespace Wallet.Infrastructure.Persistence.Repositories.Users
                 .FirstOrDefaultAsync(t => t.TokenHash == hash, cancellationToken);
         }
 
-        public async Task<IReadOnlyList<RefreshToken>> GetActiveInFamilyAsync(
+        public async Task<IReadOnlyList<RefreshToken>> GetLiveInFamilyAsync(
             Guid familyId, DateTimeOffset asOf, CancellationToken cancellationToken = default) =>
-            await _context.RefreshTokens
-                .Where(t => t.FamilyId == familyId
-                         && t.UsedAt == null
-                         && t.RevokedAt == null
-                         && t.ExpiresAt > asOf)
-                .ToListAsync(cancellationToken);
+            await Live(asOf).Where(t => t.FamilyId == familyId).ToListAsync(cancellationToken);
+
+        public async Task<IReadOnlyList<RefreshToken>> GetLiveForUserAsync(
+            Guid userId, DateTimeOffset asOf, CancellationToken cancellationToken = default) =>
+            await Live(asOf).Where(t => t.UserId == userId).ToListAsync(cancellationToken);
+
+        public Task<bool> IsFamilyRevokedAsync(Guid familyId, CancellationToken cancellationToken = default) =>
+            _context.RefreshTokens.AnyAsync(t => t.FamilyId == familyId && t.RevokedAt != null, cancellationToken);
+
+        private IQueryable<RefreshToken> Live(DateTimeOffset asOf)
+        {
+            var reuseCutoff = asOf - RefreshToken.ReuseInterval;
+
+            return _context.RefreshTokens.Where(t =>
+                t.RevokedAt == null
+                && t.ExpiresAt > asOf
+                && (t.UsedAt == null || t.UsedAt > reuseCutoff));
+        }
     }
 }

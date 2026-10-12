@@ -1,8 +1,10 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Wallet.Api.Authentication;
 using Wallet.Api.Contracts.Users;
 using Wallet.Application.Users.GetCurrentUser;
 using Wallet.Application.Users.RenameCurrentUser;
+using Wallet.Application.Users.RevokeAllSessions;
 
 namespace Wallet.Api.Controllers
 {
@@ -33,6 +35,16 @@ namespace Wallet.Api.Controllers
             var user = await _sender.Send(new RenameCurrentUserCommand(request.DisplayName), cancellationToken);
 
             return user.ToCurrentUserResponse();
+        }
+
+        [HttpDelete("me/sessions")]
+        public async Task<IActionResult> EndAllSessions(CancellationToken cancellationToken)
+        {
+            await _sender.Send(new RevokeAllSessionsCommand(), cancellationToken);
+
+            Response.Cookies.Delete(SessionAuthentication.CookieName, SessionAuthentication.CookieOptions(null));
+
+            return NoContent();
         }
     }
 }

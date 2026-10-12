@@ -1,8 +1,8 @@
 namespace Wallet.Application.Users.Login
 {
-    public sealed record LoginResult(string? AccessToken, IssuedSession? Session)
+    public sealed record LoginResult(IssuedAccessToken? AccessToken, IssuedSession? Session)
     {
         public override string ToString() =>
-            $"{nameof(LoginResult)} {{ AccessToken = ***, Session = {Session} }}";
+            $"{nameof(LoginResult)} {{ AccessToken = {AccessToken}, Session = {Session} }}";
     }
 }

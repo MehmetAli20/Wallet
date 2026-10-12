@@ -8,7 +8,12 @@ namespace Wallet.Application.Abstractions.Users
 
         Task<RefreshToken?> GetByTokenAsync(string token, CancellationToken cancellationToken = default);
 
-        Task<IReadOnlyList<RefreshToken>> GetActiveInFamilyAsync(
+        Task<IReadOnlyList<RefreshToken>> GetLiveInFamilyAsync(
             Guid familyId, DateTimeOffset asOf, CancellationToken cancellationToken = default);
+
+        Task<IReadOnlyList<RefreshToken>> GetLiveForUserAsync(
+            Guid userId, DateTimeOffset asOf, CancellationToken cancellationToken = default);
+
+        Task<bool> IsFamilyRevokedAsync(Guid familyId, CancellationToken cancellationToken = default);
     }
 }

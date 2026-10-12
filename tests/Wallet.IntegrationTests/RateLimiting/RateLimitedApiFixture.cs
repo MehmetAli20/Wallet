@@ -72,7 +72,7 @@ namespace Wallet.IntegrationTests.RateLimiting
             var login = await client.PostAsJsonAsync("/api/v1/auth/login",
                 new LoginRequest(email, "password123"));
 
-            var token = (await login.Content.ReadFromJsonAsync<LoginResponse>())!.Token;
+            var token = (await login.Content.ReadFromJsonAsync<TokenResponse>())!.AccessToken;
 
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 

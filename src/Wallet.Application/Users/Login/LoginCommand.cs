@@ -6,7 +6,7 @@ namespace Wallet.Application.Users.Login
         string Email,
         string Password,
         string? ClientIp = null,
-        LoginPurpose Purpose = LoginPurpose.AccessToken,
+        LoginPurpose Purpose = LoginPurpose.TokenPair,
         string? PreviousSessionToken = null) : IRequest<LoginResult>
     {
         public sealed override string ToString() =>

@@ -47,7 +47,7 @@ namespace Wallet.IntegrationTests.Api
             var login = await NewClient().PostAsJsonAsync("/api/v1/auth/login", new LoginRequest(email, Password));
 
             login.StatusCode.Should().Be(HttpStatusCode.OK);
-            (await login.Content.ReadFromJsonAsync<LoginResponse>())!.Token.Should().NotBeNullOrEmpty();
+            (await login.Content.ReadFromJsonAsync<TokenResponse>())!.AccessToken.Should().NotBeNullOrEmpty();
             login.Headers.Contains("Set-Cookie").Should().BeFalse();
         }
 

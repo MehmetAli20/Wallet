@@ -27,13 +27,32 @@ namespace Wallet.Api.Controllers
 
         [AllowAnonymous]
         [HttpPost("login")]
-        public async Task<ActionResult<LoginResponse>> Login(LoginRequest loginRequest, CancellationToken cancellationToken)
+        public async Task<ActionResult<TokenResponse>> Login(LoginRequest loginRequest, CancellationToken cancellationToken)
         {
             var result = await _sender.Send(
-                new LoginCommand(loginRequest.Email, loginRequest.Password, ClientIp, LoginPurpose.AccessToken),
+                new LoginCommand(loginRequest.Email, loginRequest.Password, ClientIp, LoginPurpose.TokenPair),
                 cancellationToken);
 
-            return new LoginResponse(result.AccessToken!);
+            return ToTokenResponse(result);
+        }
+
+        [AllowAnonymous]
+        [HttpPost("refresh")]
+        public async Task<ActionResult<TokenResponse>> Refresh(RefreshTokenRequest request, CancellationToken cancellationToken)
+        {
+            var result = await _sender.Send(
+                new RefreshSessionCommand(request.RefreshToken, LoginPurpose.TokenPair), cancellationToken);
+
+            return ToTokenResponse(result);
+        }
+
+        [AllowAnonymous]
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout(RefreshTokenRequest request, CancellationToken cancellationToken)
+        {
+            await _sender.Send(new LogoutCommand(request.RefreshToken), cancellationToken);
+
+            return NoContent();
         }
 
         [AllowAnonymous]
@@ -63,9 +82,9 @@ namespace Wallet.Api.Controllers
             if (string.IsNullOrEmpty(token))
                 return Unauthorized();
 
-            var session = await _sender.Send(new RefreshSessionCommand(token), cancellationToken);
+            var result = await _sender.Send(new RefreshSessionCommand(token), cancellationToken);
 
-            WriteSessionCookie(session);
+            WriteSessionCookie(result.Session!);
 
             return NoContent();
         }
@@ -103,5 +122,8 @@ namespace Wallet.Api.Controllers
                 SessionAuthentication.CookieName,
                 session.Token,
                 SessionAuthentication.CookieOptions(session.ExpiresAt));
+
+        private static TokenResponse ToTokenResponse(LoginResult result) =>
+            new(result.AccessToken!.Token, result.AccessToken.ExpiresAt, result.Session!.Token, result.Session.ExpiresAt);
     }
 }

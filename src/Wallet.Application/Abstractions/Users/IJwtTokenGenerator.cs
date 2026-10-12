@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Wallet.Application.Users;
 using Wallet.Domain.Users;
 
 namespace Wallet.Application.Abstractions.Users
 {
     public interface IJwtTokenGenerator
     {
-        string GenerateToken(User user);
+        IssuedAccessToken GenerateToken(User user, Guid sessionFamilyId);
     }
 }

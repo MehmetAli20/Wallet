@@ -96,16 +96,7 @@ namespace Wallet.Application.Users.Login
                 LoginAttempt.Success(Guid.NewGuid(), user!.Id, now, request.ClientIp, fromFamiliarNetwork),
                 cancellationToken);
 
-            if (request.Purpose == LoginPurpose.AccessToken)
-            {
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-                _logger.LogInformation("User {UserId} logged in with an access token.", user.Id);
-
-                return new LoginResult(_tokenGenerator.GenerateToken(user), null);
-            }
-
-            if (!string.IsNullOrEmpty(request.PreviousSessionToken))
+            if (request.Purpose == LoginPurpose.BrowserSession && !string.IsNullOrEmpty(request.PreviousSessionToken))
             {
                 var previous = await _refreshTokens.GetByTokenAsync(request.PreviousSessionToken, cancellationToken);
 
@@ -118,9 +109,18 @@ namespace Wallet.Application.Users.Login
             await _refreshTokens.AddAsync(session.RefreshToken, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("User {UserId} started a browser session.", user.Id);
+            var issuedSession = new IssuedSession(session.Token, session.RefreshToken.ExpiresAt);
 
-            return new LoginResult(null, new IssuedSession(session.Token, session.RefreshToken.ExpiresAt));
+            if (request.Purpose == LoginPurpose.BrowserSession)
+            {
+                _logger.LogInformation("User {UserId} started a browser session.", user.Id);
+
+                return new LoginResult(null, issuedSession);
+            }
+
+            _logger.LogInformation("User {UserId} started an app session.", user.Id);
+
+            return new LoginResult(_tokenGenerator.GenerateToken(user, session.RefreshToken.FamilyId), issuedSession);
         }
     }
 }

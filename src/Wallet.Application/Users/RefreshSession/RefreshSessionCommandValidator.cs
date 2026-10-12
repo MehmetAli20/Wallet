@@ -9,6 +9,7 @@ namespace Wallet.Application.Users.RefreshSession
             RuleFor(x => x.RefreshToken)
                 .NotEmpty()
                 .Matches("^wrt_[A-Za-z0-9_-]{43}$");
+            RuleFor(x => x.Purpose).IsInEnum();
         }
     }
 }
