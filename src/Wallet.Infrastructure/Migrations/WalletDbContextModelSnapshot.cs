@@ -534,6 +534,9 @@ namespace Wallet.Infrastructure.Migrations
                         .HasMaxLength(45)
                         .HasColumnType("character varying(45)");
 
+                    b.Property<bool>("FromFamiliarNetwork")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTimeOffset?>("LockedUntil")
                         .HasColumnType("timestamp with time zone");
 
@@ -546,6 +549,8 @@ namespace Wallet.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("UserId", "AttemptedAt");
+
+                    b.HasIndex("UserId", "FromFamiliarNetwork", "AttemptedAt");
 
                     b.ToTable("LoginAttempts", (string)null);
                 });

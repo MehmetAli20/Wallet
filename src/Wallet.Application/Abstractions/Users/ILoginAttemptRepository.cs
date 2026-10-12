@@ -5,7 +5,10 @@ namespace Wallet.Application.Abstractions.Users
     public interface ILoginAttemptRepository
     {
         Task<IReadOnlyList<LoginAttempt>> GetMostRecentAsync(
-            Guid userId, int take, CancellationToken cancellationToken = default);
+            Guid userId, bool fromFamiliarNetwork, int take, CancellationToken cancellationToken = default);
+
+        Task<IReadOnlyList<string>> GetSuccessfulClientIpsAsync(
+            Guid userId, DateTimeOffset since, CancellationToken cancellationToken = default);
 
         Task AddAsync(LoginAttempt attempt, CancellationToken cancellationToken = default);
 

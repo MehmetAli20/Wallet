@@ -15,6 +15,7 @@ namespace Wallet.Infrastructure.Persistence.Configurations
             builder.Property(x => x.ClientIp)
                 .HasMaxLength(45);
             builder.HasIndex(x => new { x.UserId, x.AttemptedAt });
+            builder.HasIndex(x => new { x.UserId, x.FromFamiliarNetwork, x.AttemptedAt });
             builder.HasOne<User>()
                 .WithMany()
                 .HasForeignKey(x => x.UserId)

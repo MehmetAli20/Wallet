@@ -9,6 +9,7 @@ namespace Wallet.Domain.Users
         public DateTimeOffset AttemptedAt { get; private set; }
         public bool Succeeded { get; private set; }
         public string? ClientIp { get; private set; }
+        public bool FromFamiliarNetwork { get; private set; }
         public DateTimeOffset? LockedUntil { get; private set; }
 
         private LoginAttempt()
@@ -21,6 +22,7 @@ namespace Wallet.Domain.Users
             DateTimeOffset attemptedAt,
             bool succeeded,
             string? clientIp,
+            bool fromFamiliarNetwork,
             DateTimeOffset? lockedUntil)
         {
             if (id == Guid.Empty)
@@ -37,18 +39,21 @@ namespace Wallet.Domain.Users
             AttemptedAt = attemptedAt.ToUniversalTime();
             Succeeded = succeeded;
             ClientIp = clientIp;
+            FromFamiliarNetwork = fromFamiliarNetwork;
             LockedUntil = lockedUntil?.ToUniversalTime();
         }
 
-        public static LoginAttempt Success(Guid id, Guid userId, DateTimeOffset attemptedAt, string? clientIp)
+        public static LoginAttempt Success(
+            Guid id, Guid userId, DateTimeOffset attemptedAt, string? clientIp, bool fromFamiliarNetwork = false)
         {
-            return new LoginAttempt(id, userId, attemptedAt, succeeded: true, clientIp, lockedUntil: null);
+            return new LoginAttempt(id, userId, attemptedAt, succeeded: true, clientIp, fromFamiliarNetwork, lockedUntil: null);
         }
 
         public static LoginAttempt Failure(
-            Guid id, Guid userId, DateTimeOffset attemptedAt, string? clientIp, DateTimeOffset? lockedUntil)
+            Guid id, Guid userId, DateTimeOffset attemptedAt, string? clientIp, DateTimeOffset? lockedUntil,
+            bool fromFamiliarNetwork = false)
         {
-            return new LoginAttempt(id, userId, attemptedAt, succeeded: false, clientIp, lockedUntil);
+            return new LoginAttempt(id, userId, attemptedAt, succeeded: false, clientIp, fromFamiliarNetwork, lockedUntil);
         }
     }
 }

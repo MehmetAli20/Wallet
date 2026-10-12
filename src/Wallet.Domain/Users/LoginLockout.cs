@@ -10,6 +10,8 @@ namespace Wallet.Domain.Users
 
         public static readonly TimeSpan Duration = TimeSpan.FromMinutes(15);
 
+        public static readonly TimeSpan FamiliarityWindow = TimeSpan.FromDays(30);
+
         public static bool IsLockedOut(IReadOnlyList<LoginAttempt> mostRecentFirst, DateTimeOffset now)
         {
             return mostRecentFirst.Any(attempt => attempt.LockedUntil > now.ToUniversalTime());

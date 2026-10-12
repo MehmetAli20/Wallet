@@ -43,9 +43,14 @@ namespace Wallet.Application.Users.Login
 
             var isRealUser = user is not null && !string.IsNullOrEmpty(user.PasswordHash);
 
+            var fromFamiliarNetwork = isRealUser && ClientNetwork.IsFamiliar(
+                request.ClientIp,
+                await _loginAttempts.GetSuccessfulClientIpsAsync(
+                    user!.Id, now - LoginLockout.FamiliarityWindow, cancellationToken));
+
             var recent = isRealUser
                 ? await _loginAttempts.GetMostRecentAsync(
-                    user!.Id, LoginLockout.MaxFailedAttempts, cancellationToken)
+                    user!.Id, fromFamiliarNetwork, LoginLockout.MaxFailedAttempts, cancellationToken)
                 : [];
 
             var isLockedOut = LoginLockout.IsLockedOut(recent, now);
@@ -61,7 +66,8 @@ namespace Wallet.Application.Users.Login
                     var lockedUntil = LoginLockout.LockoutForNextFailure(recent, now);
 
                     await _loginAttempts.AddAsync(
-                        LoginAttempt.Failure(Guid.NewGuid(), user!.Id, now, request.ClientIp, lockedUntil),
+                        LoginAttempt.Failure(
+                            Guid.NewGuid(), user!.Id, now, request.ClientIp, lockedUntil, fromFamiliarNetwork),
                         cancellationToken);
 
                     await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -69,7 +75,8 @@ namespace Wallet.Application.Users.Login
                     if (lockedUntil is not null)
                     {
                         _logger.LogWarning(
-                            "User {UserId} locked out until {LockedUntil}.", user.Id, lockedUntil);
+                            "User {UserId} locked out from {Networks} networks until {LockedUntil}.",
+                            user.Id, fromFamiliarNetwork ? "familiar" : "unfamiliar", lockedUntil);
                     }
                 }
 
@@ -86,7 +93,8 @@ namespace Wallet.Application.Users.Login
             }
 
             await _loginAttempts.AddAsync(
-                LoginAttempt.Success(Guid.NewGuid(), user!.Id, now, request.ClientIp), cancellationToken);
+                LoginAttempt.Success(Guid.NewGuid(), user!.Id, now, request.ClientIp, fromFamiliarNetwork),
+                cancellationToken);
 
             if (request.Purpose == LoginPurpose.AccessToken)
             {

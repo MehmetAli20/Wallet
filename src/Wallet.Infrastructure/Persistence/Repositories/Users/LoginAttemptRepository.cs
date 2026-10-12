@@ -14,12 +14,25 @@ namespace Wallet.Infrastructure.Persistence.Repositories.Users
         }
 
         public async Task<IReadOnlyList<LoginAttempt>> GetMostRecentAsync(
-            Guid userId, int take, CancellationToken cancellationToken = default)
+            Guid userId, bool fromFamiliarNetwork, int take, CancellationToken cancellationToken = default)
         {
             return await _context.LoginAttempts
-                .Where(attempt => attempt.UserId == userId)
+                .Where(attempt => attempt.UserId == userId && attempt.FromFamiliarNetwork == fromFamiliarNetwork)
                 .OrderByDescending(attempt => attempt.AttemptedAt)
                 .Take(take)
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<IReadOnlyList<string>> GetSuccessfulClientIpsAsync(
+            Guid userId, DateTimeOffset since, CancellationToken cancellationToken = default)
+        {
+            return await _context.LoginAttempts
+                .Where(attempt => attempt.UserId == userId
+                    && attempt.Succeeded
+                    && attempt.AttemptedAt >= since
+                    && attempt.ClientIp != null)
+                .Select(attempt => attempt.ClientIp!)
+                .Distinct()
                 .ToListAsync(cancellationToken);
         }
 

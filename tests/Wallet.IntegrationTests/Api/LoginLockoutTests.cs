@@ -6,13 +6,16 @@ using Wallet.Domain.Users;
 
 namespace Wallet.IntegrationTests.Api
 {
-    public class LoginLockoutTests : IClassFixture<ApiFixture>
+    public class LoginLockoutTests : IClassFixture<ClientIpApiFixture>
     {
         private const string Password = "password123";
+        private const string HomeIp = "203.0.113.10";
+        private const string AttackerIp = "198.51.100.20";
+        private const string AnotherStrangerIp = "192.0.2.30";
 
-        private readonly ApiFixture _fixture;
+        private readonly ClientIpApiFixture _fixture;
 
-        public LoginLockoutTests(ApiFixture fixture) => _fixture = fixture;
+        public LoginLockoutTests(ClientIpApiFixture fixture) => _fixture = fixture;
 
         private async Task<(HttpClient Client, string Email)> ARegisteredUserAsync()
         {
@@ -28,6 +31,17 @@ namespace Wallet.IntegrationTests.Api
 
         private static Task<HttpResponseMessage> LoginAsync(HttpClient client, string email, string password) =>
             client.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest(email, password));
+
+        private Task<HttpResponseMessage> LoginFromAsync(string clientIp, string email, string password)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+            {
+                Content = JsonContent.Create(new LoginRequest(email, password))
+            };
+            request.Headers.Add(ClientIpApiFixture.ClientIpHeader, clientIp);
+
+            return _fixture.CreateClient().SendAsync(request);
+        }
 
         [Fact]
         public async Task AfterTheThreshold_EvenTheCorrectPasswordIsRejected()
@@ -104,6 +118,33 @@ namespace Wallet.IntegrationTests.Api
             locked.StatusCode.Should().Be(unknown.StatusCode);
             (await locked.Content.ReadAsStringAsync())
                 .Should().Be(await unknown.Content.ReadAsStringAsync());
+        }
+
+        [Fact]
+        public async Task FailuresFromStrangers_DoNotLockTheOwnerOutOfAFamiliarNetwork()
+        {
+            var (_, email) = await ARegisteredUserAsync();
+            (await LoginFromAsync(HomeIp, email, Password)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+            for (var i = 0; i < LoginLockout.MaxFailedAttempts; i++)
+                await LoginFromAsync(AttackerIp, email, "wrong-password");
+
+            (await LoginFromAsync(AttackerIp, email, Password)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            (await LoginFromAsync(AnotherStrangerIp, email, Password)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            (await LoginFromAsync(HomeIp, email, Password)).StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        [Fact]
+        public async Task FailuresFromAFamiliarNetwork_LockOnlyThatLane()
+        {
+            var (_, email) = await ARegisteredUserAsync();
+            (await LoginFromAsync(HomeIp, email, Password)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+            for (var i = 0; i < LoginLockout.MaxFailedAttempts; i++)
+                await LoginFromAsync(HomeIp, email, "wrong-password");
+
+            (await LoginFromAsync(HomeIp, email, Password)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            (await LoginFromAsync(AttackerIp, email, Password)).StatusCode.Should().Be(HttpStatusCode.OK);
         }
     }
 }
