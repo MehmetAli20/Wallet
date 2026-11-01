@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using FluentAssertions;
 using Wallet.Api.Contracts.Expenses.Requests;
 using Wallet.Api.Contracts.Expenses.Responses;
@@ -80,6 +82,28 @@ namespace Wallet.IntegrationTests.Api
                 "/api/v1/recurringexpenses");
 
             mine!.Should().NotContain(r => r.Id == id);
+        }
+
+        [Fact]
+        public async Task TheIntervalCanBeSentByName()
+        {
+            var (groupId, owner) = await GroupOfOneAsync();
+            var byName = new JsonSerializerOptions(JsonSerializerDefaults.Web) { Converters = { new JsonStringEnumConverter() } };
+
+            using var message = new HttpRequestMessage(HttpMethod.Post, "/api/v1/recurringexpenses")
+            {
+                Content = JsonContent.Create(NewRequest(groupId, owner.Id), options: byName)
+            };
+            message.Headers.Add("Idempotency-Key", Guid.NewGuid().ToString());
+
+            var response = await owner.Client.SendAsync(message);
+
+            response.StatusCode.Should().Be(HttpStatusCode.Created);
+
+            var mine = await owner.Client.GetFromJsonAsync<List<RecurringExpenseResponse>>(
+                "/api/v1/recurringexpenses");
+
+            mine!.Single(r => r.GroupId == groupId).Interval.Should().Be("Monthly");
         }
 
         private static CreateRecurringExpenseRequest NewRequest(Guid groupId, Guid payerId) =>

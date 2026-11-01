@@ -1,3 +1,4 @@
+using Wallet.Domain.Common;
 using Wallet.Domain.Exceptions;
 
 namespace Wallet.Domain.Expenses
@@ -14,6 +15,9 @@ namespace Wallet.Domain.Expenses
             if (total <= 0)
                 throw new InvalidExpenseException("Expense total must be positive.");
 
+            if (total > Money.MaxAmount)
+                throw new InvalidExpenseException("Expense total exceeds the maximum amount.");
+
             if (participants.Count == 0)
                 throw new InvalidExpenseException("An expense needs at least one participant.");
 
@@ -28,6 +32,9 @@ namespace Wallet.Domain.Expenses
 
             if (fixedShares.Values.Any(v => v < 0))
                 throw new InvalidExpenseException("A fixed share cannot be negative.");
+
+            if (!fixedShares.Values.All(Money.IsWholeCents))
+                throw new InvalidExpenseException("A fixed share must be in whole cents.");
 
             var fixedTotal = fixedShares.Values.Sum();
 

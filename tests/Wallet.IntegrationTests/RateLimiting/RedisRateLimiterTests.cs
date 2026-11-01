@@ -90,15 +90,15 @@ namespace Wallet.IntegrationTests.RateLimiting
         public async Task TokensComeBackOverTime()
         {
             var key = NewKey();
-            var fast = new RateLimitPolicy("fast", Capacity: 2, RefillPerSecond: 20);
+            var slow = new RateLimitPolicy("slow", Capacity: 2, RefillPerSecond: 1);
 
-            (await _limiter.TryAcquireAsync(key, fast)).Allowed.Should().BeTrue();
-            (await _limiter.TryAcquireAsync(key, fast)).Allowed.Should().BeTrue();
-            (await _limiter.TryAcquireAsync(key, fast)).Allowed.Should().BeFalse();
+            (await _limiter.TryAcquireAsync(key, slow)).Allowed.Should().BeTrue();
+            (await _limiter.TryAcquireAsync(key, slow)).Allowed.Should().BeTrue();
+            (await _limiter.TryAcquireAsync(key, slow)).Allowed.Should().BeFalse();
 
-            await Task.Delay(TimeSpan.FromMilliseconds(300));
+            await Task.Delay(TimeSpan.FromMilliseconds(1500));
 
-            (await _limiter.TryAcquireAsync(key, fast)).Allowed.Should().BeTrue();
+            (await _limiter.TryAcquireAsync(key, slow)).Allowed.Should().BeTrue();
         }
 
         [Fact]
@@ -111,13 +111,10 @@ namespace Wallet.IntegrationTests.RateLimiting
 
             await Task.Delay(TimeSpan.FromMilliseconds(500));
 
-            var first = await _limiter.TryAcquireAsync(key, fast);
-            var second = await _limiter.TryAcquireAsync(key, fast);
-            var third = await _limiter.TryAcquireAsync(key, fast);
+            var decision = await _limiter.TryAcquireAsync(key, fast);
 
-            first.Allowed.Should().BeTrue();
-            second.Allowed.Should().BeTrue();
-            third.Allowed.Should().BeFalse();
+            decision.Allowed.Should().BeTrue();
+            decision.Remaining.Should().Be(1);
         }
 
         [Fact]

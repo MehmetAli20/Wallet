@@ -7,6 +7,8 @@ namespace Wallet.Domain.Common
 {
     public sealed record Money
     {
+        public const decimal MaxAmount = 999_999_999.99m;
+
         public decimal Amount { get; }
         public string Currency { get; }
         public Money(decimal amount,string currency)
@@ -22,6 +24,9 @@ namespace Wallet.Domain.Common
 
             return currency.ToUpperInvariant();
         }
+
+        public static bool IsWholeCents(decimal amount) => decimal.Round(amount, 2) == amount;
+
         public Money Add(Money other)
         {
             if (other == null) throw new ArgumentNullException(nameof(other));

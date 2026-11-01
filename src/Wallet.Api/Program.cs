@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Microsoft.AspNetCore.HttpOverrides;
+using System.Text.Json.Serialization;
 using Wallet.Api.Authentication;
 using Wallet.Api.Configuration;
 using Wallet.Api.Middleware;
@@ -42,7 +43,8 @@ builder.Services.AddControllers(options =>
     {
         options.Filters.Add<RateLimitFilter>();
     }
-});
+})
+.AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi(options =>
 {

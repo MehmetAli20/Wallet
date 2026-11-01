@@ -46,6 +46,12 @@ namespace Wallet.Domain.Settlements
             if (amount <= 0)
                 throw new InvalidTransferException("Settlement amount must be greater than zero.");
 
+            if (amount > Money.MaxAmount)
+                throw new InvalidTransferException("Settlement amount exceeds the maximum amount.");
+
+            if (!Money.IsWholeCents(amount))
+                throw new InvalidTransferException("Settlement amount must be in whole cents.");
+
             var settlement = new Settlement
             {
                 Id = id,

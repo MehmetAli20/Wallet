@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Wallet.Application.Abstractions.Users;
 using Wallet.Domain.Users;
 
 namespace Wallet.Application.Users.Register
@@ -16,9 +17,11 @@ namespace Wallet.Application.Users.Register
                 .MaximumLength(254);
 
             RuleFor(x => x.Password)
+                .Cascade(CascadeMode.Stop)
                 .NotEmpty()
                 .MinimumLength(8)
-                .MaximumLength(72);
+                .Must(p => Encoding.UTF8.GetByteCount(p) <= IPasswordHasher.MaxPasswordBytes)
+                .WithMessage($"Password must be at most {IPasswordHasher.MaxPasswordBytes} bytes in UTF-8.");
 
             RuleFor(x => x.DisplayName)
                 .Must(name => User.TryNormalizeDisplayName(name, out _))

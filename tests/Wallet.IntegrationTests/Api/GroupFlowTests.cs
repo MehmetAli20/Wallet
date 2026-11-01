@@ -257,6 +257,19 @@ namespace Wallet.IntegrationTests.Api
         }
 
         [Fact]
+        public async Task AnAmountAboveTheMaximum_IsAValidationError_Not500()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+
+            var response = await PostExpenseAsync(members[0], new CreateExpenseRequest(
+                groupId, members[0].Id, 10_000_000_000_000_000m, "Market", DateTimeOffset.UtcNow, Participants(members)));
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await response.Content.ReadFromJsonAsync<ValidationProblemDetails>())!.Errors
+                .Should().ContainKey(nameof(CreateExpenseRequest.Amount));
+        }
+
+        [Fact]
         public async Task WithoutAnIdempotencyKeyHeader_TheRequestIsRejected()
         {
             var (groupId, members) = await GroupOfAsync(3);

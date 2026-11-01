@@ -1,4 +1,6 @@
 using FluentValidation;
+using System.Text;
+using Wallet.Application.Abstractions.Users;
 
 namespace Wallet.Application.Groups.ClaimPlaceholder
 {
@@ -8,7 +10,12 @@ namespace Wallet.Application.Groups.ClaimPlaceholder
         {
             RuleFor(x => x.Token).NotEmpty();
             RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(254);
-            RuleFor(x => x.Password).NotEmpty().MinimumLength(8).MaximumLength(72);
+            RuleFor(x => x.Password)
+                .Cascade(CascadeMode.Stop)
+                .NotEmpty()
+                .MinimumLength(8)
+                .Must(p => Encoding.UTF8.GetByteCount(p) <= IPasswordHasher.MaxPasswordBytes)
+                .WithMessage($"Password must be at most {IPasswordHasher.MaxPasswordBytes} bytes in UTF-8.");
         }
     }
 }

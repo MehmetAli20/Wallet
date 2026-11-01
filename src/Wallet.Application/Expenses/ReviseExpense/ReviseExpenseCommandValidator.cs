@@ -1,5 +1,6 @@
 using FluentValidation;
 using Wallet.Application.Abstractions;
+using Wallet.Domain.Common;
 using Wallet.Domain.Expenses;
 
 namespace Wallet.Application.Expenses.ReviseExpense
@@ -9,7 +10,11 @@ namespace Wallet.Application.Expenses.ReviseExpense
         public ReviseExpenseCommandValidator()
         {
             RuleFor(x => x.ExpenseId).NotEmpty();
-            RuleFor(x => x.Amount).GreaterThan(0);
+            RuleFor(x => x.Amount)
+                .GreaterThan(0)
+                .LessThanOrEqualTo(Money.MaxAmount)
+                .Must(Money.IsWholeCents)
+                .WithMessage("Amount must be in whole cents.");
             RuleFor(x => x.Description).NotEmpty().MaximumLength(200);
             RuleFor(x => x.OccurredAt).NotEqual(default(DateTimeOffset));
             RuleFor(x => x.Participants)
@@ -19,6 +24,11 @@ namespace Wallet.Application.Expenses.ReviseExpense
                 .WithMessage($"An expense can have at most {Expense.MaxParticipants} participants.")
                 .Must(p => p.Distinct().Count() == p.Count)
                 .WithMessage("A participant cannot appear twice.");
+            RuleFor(x => x.FixedShares)
+                .Must(s => s.Values.All(v => v <= Money.MaxAmount))
+                .WithMessage("A share cannot exceed the maximum amount.")
+                .Must(s => s.Values.All(Money.IsWholeCents))
+                .WithMessage("Shares must be in whole cents.");
             RuleFor(x => x.IdempotencyKey).NotEmpty().MaximumLength(IIdempotentRequest.KeyMaxLength);
         }
     }

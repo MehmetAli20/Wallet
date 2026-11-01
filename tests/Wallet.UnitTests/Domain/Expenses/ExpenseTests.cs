@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Wallet.Domain.Common;
 using Wallet.Domain.Exceptions;
 using Wallet.Domain.Expenses;
 using Wallet.Domain.Groups;
@@ -294,6 +295,29 @@ namespace Wallet.UnitTests.Domain.Expenses
 
             var act = () => Expense.Create(Guid.NewGuid(), group, members[0], members[0], 1000m, "Market",
                 DateTimeOffset.UtcNow, members);
+
+            act.Should().Throw<InvalidExpenseException>();
+        }
+
+        [Fact]
+        public void TotalAboveTheMaximum_IsRejected()
+        {
+            var (group, members) = NewGroup(2);
+
+            var act = () => Expense.Create(Guid.NewGuid(), group, members[0], members[0], Money.MaxAmount + 0.01m, "Market",
+                DateTimeOffset.UtcNow, members);
+
+            act.Should().Throw<InvalidExpenseException>();
+        }
+
+        [Fact]
+        public void SubCentFixedShares_AreRejected()
+        {
+            var (group, members) = NewGroup(2);
+
+            var act = () => Expense.Create(Guid.NewGuid(), group, members[0], members[0], 10m, "Market",
+                DateTimeOffset.UtcNow, members,
+                new Dictionary<Guid, decimal> { [members[0]] = 3.335m, [members[1]] = 6.665m });
 
             act.Should().Throw<InvalidExpenseException>();
         }

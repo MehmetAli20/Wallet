@@ -5,7 +5,9 @@ using Wallet.Application.Expenses.CreateExpense;
 using Wallet.Application.Expenses.CreateRecurringExpense;
 using Wallet.Application.Expenses.ReverseExpense;
 using Wallet.Application.Expenses.ReviseExpense;
+using Wallet.Application.Groups.ClaimPlaceholder;
 using Wallet.Application.Groups.CreateGroup;
+using Wallet.Application.Groups.EnsurePair;
 using Wallet.Application.Groups.InviteToGroup;
 using Wallet.Application.Transfers.TransferMoney;
 using Wallet.Application.Users.Login;
@@ -13,6 +15,7 @@ using Wallet.Application.Users.Register;
 using Wallet.Application.Users.RenameCurrentUser;
 using Wallet.Application.Invitations.AcceptInvitation;
 using Wallet.Application.Invitations.DeclineInvitation;
+using Wallet.Domain.Common;
 using Wallet.Domain.Expenses;
 
 namespace Wallet.UnitTests.Application
@@ -58,6 +61,27 @@ namespace Wallet.UnitTests.Application
         public void CreateGroup_LowercaseCurrency_Passes() =>
             IsValid(new CreateGroupCommandValidator(), ValidGroup() with { Currency = "try" })
                 .Should().BeTrue();
+
+        [Theory]
+        [InlineData("ABC")]
+        [InlineData("XAU")]
+        public void CreateGroup_UnsupportedCurrency_Fails(string currency) =>
+            Errors(new CreateGroupCommandValidator(), ValidGroup() with { Currency = currency })
+                .Should().Contain(nameof(CreateGroupCommand.Currency));
+
+        private static EnsurePairCommand ValidPair() => new(Guid.NewGuid(), "USD");
+
+        [Fact]
+        public void EnsurePair_ValidCommand_Passes() =>
+            IsValid(new EnsurePairCommandValidator(), ValidPair()).Should().BeTrue();
+
+        [Theory]
+        [InlineData("ABC")]
+        [InlineData("XAU")]
+        [InlineData("US1")]
+        public void EnsurePair_UnsupportedCurrency_Fails(string currency) =>
+            Errors(new EnsurePairCommandValidator(), ValidPair() with { Currency = currency })
+                .Should().Contain(nameof(EnsurePairCommand.Currency));
 
         private static InviteToGroupCommand ValidInvite() => new(Guid.NewGuid(), Guid.NewGuid());
 
@@ -109,6 +133,16 @@ namespace Wallet.UnitTests.Application
         public void TransferMoney_TooLongIdempotencyKey_Fails() =>
             Errors(new TransferMoneyCommandValidator(), ValidTransfer() with { IdempotencyKey = TooLongKey })
                 .Should().Contain(nameof(TransferMoneyCommand.IdempotencyKey));
+
+        [Fact]
+        public void TransferMoney_AmountAboveTheMaximum_Fails() =>
+            Errors(new TransferMoneyCommandValidator(), ValidTransfer() with { Amount = Money.MaxAmount + 0.01m })
+                .Should().Contain(nameof(TransferMoneyCommand.Amount));
+
+        [Fact]
+        public void TransferMoney_SubCentAmount_Fails() =>
+            Errors(new TransferMoneyCommandValidator(), ValidTransfer() with { Amount = 10.005m })
+                .Should().Contain(nameof(TransferMoneyCommand.Amount));
 
         private static CreateExpenseCommand ValidExpense()
         {
@@ -184,6 +218,45 @@ namespace Wallet.UnitTests.Application
                 .Should().Contain(nameof(CreateExpenseCommand.Participants));
         }
 
+        [Fact]
+        public void CreateExpense_AmountAboveTheMaximum_Fails() =>
+            Errors(new CreateExpenseCommandValidator(), ValidExpense() with { Amount = Money.MaxAmount + 0.01m })
+                .Should().Contain(nameof(CreateExpenseCommand.Amount));
+
+        [Fact]
+        public void CreateExpense_AmountAtTheMaximum_Passes() =>
+            IsValid(new CreateExpenseCommandValidator(), ValidExpense() with { Amount = Money.MaxAmount })
+                .Should().BeTrue();
+
+        [Fact]
+        public void CreateExpense_SubCentAmount_Fails() =>
+            Errors(new CreateExpenseCommandValidator(), ValidExpense() with { Amount = 10.005m })
+                .Should().Contain(nameof(CreateExpenseCommand.Amount));
+
+        [Fact]
+        public void CreateExpense_SubCentShare_Fails()
+        {
+            var expense = ValidExpense();
+
+            Errors(new CreateExpenseCommandValidator(), expense with
+                {
+                    FixedShares = new Dictionary<Guid, decimal> { [expense.PayerId] = 33.335m }
+                })
+                .Should().Contain(nameof(CreateExpenseCommand.FixedShares));
+        }
+
+        [Fact]
+        public void CreateExpense_ShareAboveTheMaximum_Fails()
+        {
+            var expense = ValidExpense();
+
+            Errors(new CreateExpenseCommandValidator(), expense with
+                {
+                    FixedShares = new Dictionary<Guid, decimal> { [expense.PayerId] = Money.MaxAmount + 0.01m }
+                })
+                .Should().Contain(nameof(CreateExpenseCommand.FixedShares));
+        }
+
         private static ReviseExpenseCommand ValidRevision() =>
             new(Guid.NewGuid(), 100m, "Market", DateTimeOffset.UtcNow,
                 new List<Guid> { Guid.NewGuid() }, new Dictionary<Guid, decimal>(), "key");
@@ -196,6 +269,23 @@ namespace Wallet.UnitTests.Application
         public void ReviseExpense_TooLongIdempotencyKey_Fails() =>
             Errors(new ReviseExpenseCommandValidator(), ValidRevision() with { IdempotencyKey = TooLongKey })
                 .Should().Contain(nameof(ReviseExpenseCommand.IdempotencyKey));
+
+        [Fact]
+        public void ReviseExpense_AmountAboveTheMaximum_Fails() =>
+            Errors(new ReviseExpenseCommandValidator(), ValidRevision() with { Amount = Money.MaxAmount + 0.01m })
+                .Should().Contain(nameof(ReviseExpenseCommand.Amount));
+
+        [Fact]
+        public void ReviseExpense_SubCentShare_Fails()
+        {
+            var revision = ValidRevision();
+
+            Errors(new ReviseExpenseCommandValidator(), revision with
+                {
+                    FixedShares = new Dictionary<Guid, decimal> { [revision.Participants[0]] = 33.335m }
+                })
+                .Should().Contain(nameof(ReviseExpenseCommand.FixedShares));
+        }
 
         private static ReverseExpenseCommand ValidReversal() => new(Guid.NewGuid(), null, "key");
 
@@ -225,6 +315,23 @@ namespace Wallet.UnitTests.Application
         public void CreateRecurringExpense_TooLongIdempotencyKey_Fails() =>
             Errors(new CreateRecurringExpenseCommandValidator(), ValidRecurring() with { IdempotencyKey = TooLongKey })
                 .Should().Contain(nameof(CreateRecurringExpenseCommand.IdempotencyKey));
+
+        [Fact]
+        public void CreateRecurringExpense_AmountAboveTheMaximum_Fails() =>
+            Errors(new CreateRecurringExpenseCommandValidator(), ValidRecurring() with { Amount = Money.MaxAmount + 0.01m })
+                .Should().Contain(nameof(CreateRecurringExpenseCommand.Amount));
+
+        [Fact]
+        public void CreateRecurringExpense_SubCentShare_Fails()
+        {
+            var recurring = ValidRecurring();
+
+            Errors(new CreateRecurringExpenseCommandValidator(), recurring with
+                {
+                    FixedShares = new Dictionary<Guid, decimal> { [recurring.PayerId] = 33.335m }
+                })
+                .Should().Contain(nameof(CreateRecurringExpenseCommand.FixedShares));
+        }
 
         private static LoginCommand ValidLogin() => new("ahmet@test.com", "password123");
 
@@ -274,6 +381,22 @@ namespace Wallet.UnitTests.Application
         public void Register_PasswordAtBcryptLimit_Passes() =>
             IsValid(new RegisterCommandValidator(), ValidRegister() with { Password = new string('a', 72) })
                 .Should().BeTrue();
+
+        [Fact]
+        public void Register_PasswordBeyondBcryptLimitInBytes_Fails() =>
+            Errors(new RegisterCommandValidator(), ValidRegister() with { Password = new string('ş', 37) })
+                .Should().Contain(nameof(RegisterCommand.Password));
+
+        private static ClaimPlaceholderCommand ValidClaim() => new("token", "ahmet@test.com", "password123");
+
+        [Fact]
+        public void ClaimPlaceholder_ValidCommand_Passes() =>
+            IsValid(new ClaimPlaceholderCommandValidator(), ValidClaim()).Should().BeTrue();
+
+        [Fact]
+        public void ClaimPlaceholder_PasswordBeyondBcryptLimitInBytes_Fails() =>
+            Errors(new ClaimPlaceholderCommandValidator(), ValidClaim() with { Password = new string('ş', 37) })
+                .Should().Contain(nameof(ClaimPlaceholderCommand.Password));
 
         [Theory]
         [InlineData("")]
