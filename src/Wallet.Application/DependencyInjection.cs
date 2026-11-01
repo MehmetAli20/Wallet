@@ -24,8 +24,8 @@ namespace Wallet.Application
                 cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
                 cfg.AddOpenBehavior(typeof(LoggingBehavior<,>));
                 cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
-                cfg.AddOpenBehavior(typeof(IdempotencyBehavior<,>));
                 cfg.AddOpenBehavior(typeof(RetryBehavior<,>));
+                cfg.AddOpenBehavior(typeof(IdempotencyBehavior<,>));
             });
             return services;
         }
