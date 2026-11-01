@@ -1,4 +1,5 @@
 using FluentValidation;
+using Wallet.Application.Abstractions;
 
 namespace Wallet.Application.Expenses.ReverseExpense
 {
@@ -8,7 +9,7 @@ namespace Wallet.Application.Expenses.ReverseExpense
         {
             RuleFor(x => x.ExpenseId).NotEmpty();
             RuleFor(x => x.Reason).MaximumLength(200);
-            RuleFor(x => x.IdempotencyKey).NotEmpty();
+            RuleFor(x => x.IdempotencyKey).NotEmpty().MaximumLength(IIdempotentRequest.KeyMaxLength);
         }
     }
 }

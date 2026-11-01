@@ -6,6 +6,8 @@ namespace Wallet.Application.Abstractions
 {
     public interface IIdempotentRequest
     {
+        const int KeyMaxLength = 100;
+
         string IdempotencyKey { get; }
     }
 }

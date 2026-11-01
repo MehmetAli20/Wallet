@@ -31,6 +31,7 @@ namespace Wallet.Api.Controllers
 
             var fixedShares = request.Participants
                 .Where(p => p.Share.HasValue)
+                .DistinctBy(p => p.UserId)
                 .ToDictionary(p => p.UserId, p => p.Share!.Value);
 
             var id = await _sender.Send(new CreateRecurringExpenseCommand(

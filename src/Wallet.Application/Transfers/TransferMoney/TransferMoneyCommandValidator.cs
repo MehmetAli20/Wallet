@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using Wallet.Application.Abstractions;
 
 namespace Wallet.Application.Transfers.TransferMoney
 {
@@ -9,7 +10,7 @@ namespace Wallet.Application.Transfers.TransferMoney
             RuleFor(x => x.GroupId).NotEmpty();
             RuleFor(x => x.RecipientUserId).NotEmpty();
             RuleFor(x => x.Amount).GreaterThan(0);
-            RuleFor(x => x.IdempotencyKey).NotEmpty();
+            RuleFor(x => x.IdempotencyKey).NotEmpty().MaximumLength(IIdempotentRequest.KeyMaxLength);
         }
     }
 }

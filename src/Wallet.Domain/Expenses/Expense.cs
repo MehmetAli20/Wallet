@@ -7,6 +7,8 @@ namespace Wallet.Domain.Expenses
 {
     public class Expense : AggregateRoot
     {
+        public const int MaxParticipants = 100;
+
         private readonly List<ExpenseSplit> _splits = new();
 
         public Guid Id { get; private set; }

@@ -286,5 +286,16 @@ namespace Wallet.UnitTests.Domain.Expenses
 
             act.Should().Throw<ArgumentException>();
         }
+
+        [Fact]
+        public void MoreParticipantsThanTheLimit_AreRejected()
+        {
+            var (group, members) = NewGroup(Expense.MaxParticipants + 1);
+
+            var act = () => Expense.Create(Guid.NewGuid(), group, members[0], members[0], 1000m, "Market",
+                DateTimeOffset.UtcNow, members);
+
+            act.Should().Throw<InvalidExpenseException>();
+        }
     }
 }

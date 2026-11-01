@@ -1,6 +1,10 @@
 using FluentAssertions;
 using FluentValidation;
+using Wallet.Application.Abstractions;
 using Wallet.Application.Expenses.CreateExpense;
+using Wallet.Application.Expenses.CreateRecurringExpense;
+using Wallet.Application.Expenses.ReverseExpense;
+using Wallet.Application.Expenses.ReviseExpense;
 using Wallet.Application.Groups.CreateGroup;
 using Wallet.Application.Groups.InviteToGroup;
 using Wallet.Application.Transfers.TransferMoney;
@@ -9,6 +13,7 @@ using Wallet.Application.Users.Register;
 using Wallet.Application.Users.RenameCurrentUser;
 using Wallet.Application.Invitations.AcceptInvitation;
 using Wallet.Application.Invitations.DeclineInvitation;
+using Wallet.Domain.Expenses;
 
 namespace Wallet.UnitTests.Application
 {
@@ -19,6 +24,8 @@ namespace Wallet.UnitTests.Application
 
         private static IEnumerable<string> Errors<T>(IValidator<T> validator, T instance) =>
             validator.Validate(instance).Errors.Select(e => e.PropertyName);
+
+        private static readonly string TooLongKey = new('k', IIdempotentRequest.KeyMaxLength + 1);
 
         private static CreateGroupCommand ValidGroup() => new("Piknik", "TRY");
 
@@ -98,6 +105,11 @@ namespace Wallet.UnitTests.Application
             Errors(new TransferMoneyCommandValidator(), ValidTransfer() with { IdempotencyKey = "" })
                 .Should().Contain(nameof(TransferMoneyCommand.IdempotencyKey));
 
+        [Fact]
+        public void TransferMoney_TooLongIdempotencyKey_Fails() =>
+            Errors(new TransferMoneyCommandValidator(), ValidTransfer() with { IdempotencyKey = TooLongKey })
+                .Should().Contain(nameof(TransferMoneyCommand.IdempotencyKey));
+
         private static CreateExpenseCommand ValidExpense()
         {
             var payer = Guid.NewGuid();
@@ -143,6 +155,76 @@ namespace Wallet.UnitTests.Application
         public void CreateExpense_DefaultOccurredAt_Fails() =>
             Errors(new CreateExpenseCommandValidator(), ValidExpense() with { OccurredAt = default })
                 .Should().Contain(nameof(CreateExpenseCommand.OccurredAt));
+
+        [Fact]
+        public void CreateExpense_TooLongIdempotencyKey_Fails() =>
+            Errors(new CreateExpenseCommandValidator(), ValidExpense() with { IdempotencyKey = TooLongKey })
+                .Should().Contain(nameof(CreateExpenseCommand.IdempotencyKey));
+
+        [Fact]
+        public void CreateExpense_IdempotencyKeyAtTheLimit_Passes() =>
+            IsValid(new CreateExpenseCommandValidator(),
+                    ValidExpense() with { IdempotencyKey = new string('k', IIdempotentRequest.KeyMaxLength) })
+                .Should().BeTrue();
+
+        [Fact]
+        public void CreateExpense_TooManyParticipants_Fails() =>
+            Errors(new CreateExpenseCommandValidator(), ValidExpense() with
+                {
+                    Participants = Enumerable.Range(0, Expense.MaxParticipants + 1).Select(_ => Guid.NewGuid()).ToList()
+                })
+                .Should().Contain(nameof(CreateExpenseCommand.Participants));
+
+        [Fact]
+        public void CreateExpense_RepeatedParticipant_Fails()
+        {
+            var someone = Guid.NewGuid();
+
+            Errors(new CreateExpenseCommandValidator(), ValidExpense() with { Participants = new List<Guid> { someone, someone } })
+                .Should().Contain(nameof(CreateExpenseCommand.Participants));
+        }
+
+        private static ReviseExpenseCommand ValidRevision() =>
+            new(Guid.NewGuid(), 100m, "Market", DateTimeOffset.UtcNow,
+                new List<Guid> { Guid.NewGuid() }, new Dictionary<Guid, decimal>(), "key");
+
+        [Fact]
+        public void ReviseExpense_ValidCommand_Passes() =>
+            IsValid(new ReviseExpenseCommandValidator(), ValidRevision()).Should().BeTrue();
+
+        [Fact]
+        public void ReviseExpense_TooLongIdempotencyKey_Fails() =>
+            Errors(new ReviseExpenseCommandValidator(), ValidRevision() with { IdempotencyKey = TooLongKey })
+                .Should().Contain(nameof(ReviseExpenseCommand.IdempotencyKey));
+
+        private static ReverseExpenseCommand ValidReversal() => new(Guid.NewGuid(), null, "key");
+
+        [Fact]
+        public void ReverseExpense_ValidCommand_Passes() =>
+            IsValid(new ReverseExpenseCommandValidator(), ValidReversal()).Should().BeTrue();
+
+        [Fact]
+        public void ReverseExpense_TooLongIdempotencyKey_Fails() =>
+            Errors(new ReverseExpenseCommandValidator(), ValidReversal() with { IdempotencyKey = TooLongKey })
+                .Should().Contain(nameof(ReverseExpenseCommand.IdempotencyKey));
+
+        private static CreateRecurringExpenseCommand ValidRecurring()
+        {
+            var payer = Guid.NewGuid();
+
+            return new CreateRecurringExpenseCommand(
+                Guid.NewGuid(), payer, 100m, "Rent", RecurrenceInterval.Monthly, DateTimeOffset.UtcNow,
+                new List<Guid> { payer }, new Dictionary<Guid, decimal>(), "key");
+        }
+
+        [Fact]
+        public void CreateRecurringExpense_ValidCommand_Passes() =>
+            IsValid(new CreateRecurringExpenseCommandValidator(), ValidRecurring()).Should().BeTrue();
+
+        [Fact]
+        public void CreateRecurringExpense_TooLongIdempotencyKey_Fails() =>
+            Errors(new CreateRecurringExpenseCommandValidator(), ValidRecurring() with { IdempotencyKey = TooLongKey })
+                .Should().Contain(nameof(CreateRecurringExpenseCommand.IdempotencyKey));
 
         private static LoginCommand ValidLogin() => new("ahmet@test.com", "password123");
 

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
+using Microsoft.AspNetCore.Mvc;
 using Wallet.Api.Contracts.Accounts.Responses;
 using Wallet.Api.Contracts.Activity.Responses;
 using Wallet.Api.Contracts.Expenses.Requests;
@@ -12,6 +13,7 @@ using Wallet.Api.Contracts.Placeholders;
 using Wallet.Api.Contracts.Users;
 using Wallet.Api.Contracts.Transfers;
 using Wallet.Api.Contracts.Common;
+using Wallet.Application.Abstractions;
 
 namespace Wallet.IntegrationTests.Api
 {
@@ -219,6 +221,39 @@ namespace Wallet.IntegrationTests.Api
                 groupId, payer.Id, 100m, "Market", DateTimeOffset.UtcNow, participants));
 
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        [Fact]
+        public async Task AnIdempotencyKeyLongerThanTheStoredColumn_IsAValidationError_Not500()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+
+            var response = await PostExpenseAsync(members[0], new CreateExpenseRequest(
+                    groupId, members[0].Id, 90m, "Market", DateTimeOffset.UtcNow, Participants(members)),
+                new string('k', IIdempotentRequest.KeyMaxLength + 1));
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await response.Content.ReadFromJsonAsync<ValidationProblemDetails>())!.Errors
+                .Should().ContainKey(nameof(IIdempotentRequest.IdempotencyKey));
+        }
+
+        [Fact]
+        public async Task ARepeatedParticipantWithAShare_IsAValidationError()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+            var friend = members[1];
+
+            var response = await PostExpenseAsync(members[0], new CreateExpenseRequest(
+                groupId, members[0].Id, 90m, "Market", DateTimeOffset.UtcNow,
+                [
+                    new ExpenseParticipantRequest(members[0].Id, null),
+                    new ExpenseParticipantRequest(friend.Id, 30m),
+                    new ExpenseParticipantRequest(friend.Id, 30m)
+                ]));
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await response.Content.ReadFromJsonAsync<ValidationProblemDetails>())!.Errors
+                .Should().ContainKey(nameof(CreateExpenseRequest.Participants));
         }
 
         [Fact]

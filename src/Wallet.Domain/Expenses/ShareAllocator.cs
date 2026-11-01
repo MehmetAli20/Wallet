@@ -17,6 +17,9 @@ namespace Wallet.Domain.Expenses
             if (participants.Count == 0)
                 throw new InvalidExpenseException("An expense needs at least one participant.");
 
+            if (participants.Count > Expense.MaxParticipants)
+                throw new InvalidExpenseException($"An expense can have at most {Expense.MaxParticipants} participants.");
+
             if (participants.Distinct().Count() != participants.Count)
                 throw new InvalidExpenseException("A participant cannot appear twice.");
 
