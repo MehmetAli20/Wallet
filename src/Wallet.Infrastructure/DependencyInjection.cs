@@ -61,6 +61,7 @@ namespace Wallet.Infrastructure
             services.AddScoped<IExpenseRepository, ExpenseRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IUserBlockRepository, UserBlockRepository>();
+            services.AddScoped<IUserReportRepository, UserReportRepository>();
             services.AddScoped<ILoginAttemptRepository, LoginAttemptRepository>();
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();

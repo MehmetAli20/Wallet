@@ -15,11 +15,14 @@ using Wallet.Application.Users.DeleteCurrentUser;
 using Wallet.Application.Users.Login;
 using Wallet.Application.Users.Register;
 using Wallet.Application.Users.RenameCurrentUser;
+using Wallet.Application.Users.ReportUser;
+using Wallet.Application.Users.ResolveReport;
 using Wallet.Application.Users.UnblockUser;
 using Wallet.Application.Invitations.AcceptInvitation;
 using Wallet.Application.Invitations.DeclineInvitation;
 using Wallet.Domain.Common;
 using Wallet.Domain.Expenses;
+using Wallet.Domain.Users;
 
 namespace Wallet.UnitTests.Application
 {
@@ -474,5 +477,26 @@ namespace Wallet.UnitTests.Application
         public void UnblockUser_EmptyId_Fails() =>
             Errors(new UnblockUserCommandValidator(), new UnblockUserCommand(Guid.Empty))
                 .Should().Contain(nameof(UnblockUserCommand.UserId));
+
+        [Fact]
+        public void ReportUser_EmptyId_Fails() =>
+            Errors(new ReportUserCommandValidator(), new ReportUserCommand(Guid.Empty, ReportReason.Spam, null))
+                .Should().Contain(nameof(ReportUserCommand.UserId));
+
+        [Fact]
+        public void ReportUser_UnknownReason_Fails() =>
+            Errors(new ReportUserCommandValidator(), new ReportUserCommand(Guid.NewGuid(), (ReportReason)99, null))
+                .Should().Contain(nameof(ReportUserCommand.Reason));
+
+        [Fact]
+        public void ReportUser_TooLongDetails_Fails() =>
+            Errors(new ReportUserCommandValidator(),
+                    new ReportUserCommand(Guid.NewGuid(), ReportReason.Other, new string('a', UserReport.DetailsMaxLength + 1)))
+                .Should().Contain(nameof(ReportUserCommand.Details));
+
+        [Fact]
+        public void ResolveReport_EmptyId_Fails() =>
+            Errors(new ResolveReportCommandValidator(), new ResolveReportCommand(Guid.Empty))
+                .Should().Contain(nameof(ResolveReportCommand.ReportId));
     }
 }

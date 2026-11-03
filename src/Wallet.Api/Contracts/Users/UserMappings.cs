@@ -10,5 +10,9 @@ namespace Wallet.Api.Contracts.Users
 
         public static BlockedUserResponse ToBlockedUserResponse(this BlockedUser blocked) =>
             new(blocked.UserId, blocked.DisplayName);
+
+        public static OpenReportResponse ToOpenReportResponse(this OpenReport report) =>
+            new(report.Id, report.ReporterId, report.ReporterDisplayName, report.ReportedUserId,
+                report.ReportedDisplayName, report.Reason.ToString(), report.Details, report.ReportedAt);
     }
 }

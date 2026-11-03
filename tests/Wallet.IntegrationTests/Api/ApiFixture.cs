@@ -5,8 +5,10 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
 using Wallet.Api.Contracts.Users;
+using Wallet.Application.Users;
 using Wallet.Infrastructure.Persistence;
 
 namespace Wallet.IntegrationTests.Api
@@ -64,6 +66,26 @@ namespace Wallet.IntegrationTests.Api
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             return new TestUser(userId, client, email);
+        }
+
+        public async Task<HttpClient> SignInAsAdminAsync()
+        {
+            var email = $"a{Guid.NewGuid():N}@test.com";
+
+            using (var scope = Services.CreateScope())
+            {
+                await scope.ServiceProvider.GetRequiredService<AdminUserSeeder>().SeedAsync(email, "password123");
+            }
+
+            var client = CreateClient();
+
+            var login = await client.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest(email, "password123"));
+            login.StatusCode.Should().Be(HttpStatusCode.OK);
+            var token = (await login.Content.ReadFromJsonAsync<TokenResponse>())!.AccessToken;
+
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            return client;
         }
     }
 }

@@ -690,6 +690,47 @@ namespace Wallet.Infrastructure.Migrations
                     b.ToTable("UserBlocks", (string)null);
                 });
 
+            modelBuilder.Entity("Wallet.Domain.Users.UserReport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Details")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTimeOffset>("ReportedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ReportedUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ReporterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ResolvedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReportedUserId");
+
+                    b.HasIndex("ReporterId", "ReportedUserId")
+                        .IsUnique()
+                        .HasFilter("\"ResolvedAt\" IS NULL");
+
+                    b.ToTable("UserReports", (string)null);
+                });
+
             modelBuilder.Entity("Wallet.Infrastructure.Persistence.Idempotency.IdempotencyRecord", b =>
                 {
                     b.Property<Guid>("UserId")
@@ -810,6 +851,21 @@ namespace Wallet.Infrastructure.Migrations
                     b.HasOne("Wallet.Domain.Users.User", null)
                         .WithMany()
                         .HasForeignKey("BlockerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Wallet.Domain.Users.UserReport", b =>
+                {
+                    b.HasOne("Wallet.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("ReportedUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Wallet.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("ReporterId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

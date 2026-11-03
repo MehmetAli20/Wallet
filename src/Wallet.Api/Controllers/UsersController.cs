@@ -7,6 +7,7 @@ using Wallet.Application.Users.DeleteCurrentUser;
 using Wallet.Application.Users.GetBlockedUsers;
 using Wallet.Application.Users.GetCurrentUser;
 using Wallet.Application.Users.RenameCurrentUser;
+using Wallet.Application.Users.ReportUser;
 using Wallet.Application.Users.RevokeAllSessions;
 using Wallet.Application.Users.UnblockUser;
 
@@ -83,6 +84,15 @@ namespace Wallet.Api.Controllers
         public async Task<IActionResult> Unblock(Guid userId, CancellationToken cancellationToken)
         {
             await _sender.Send(new UnblockUserCommand(userId), cancellationToken);
+
+            return NoContent();
+        }
+
+        [HttpPost("{userId:guid}/reports")]
+        public async Task<IActionResult> Report(
+            Guid userId, ReportUserRequest request, CancellationToken cancellationToken)
+        {
+            await _sender.Send(new ReportUserCommand(userId, request.Reason, request.Details), cancellationToken);
 
             return NoContent();
         }

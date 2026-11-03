@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Wallet.Api.Contracts.Accounts.Responses;
 using Wallet.Api.Contracts.Activity.Responses;
@@ -14,6 +15,7 @@ using Wallet.Api.Contracts.Users;
 using Wallet.Api.Contracts.Transfers;
 using Wallet.Api.Contracts.Common;
 using Wallet.Application.Abstractions;
+using Wallet.Domain.Users;
 
 namespace Wallet.IntegrationTests.Api
 {
@@ -1675,9 +1677,147 @@ namespace Wallet.IntegrationTests.Api
                 .StatusCode.Should().Be(HttpStatusCode.NotFound);
         }
 
+        [Fact]
+        public async Task AnAdmin_SeesTheReportOfSomeoneInYourGroup()
+        {
+            var (_, members) = await GroupOfAsync(2);
+            var (reporter, reported) = (members[0], members[1]);
+            var admin = await _fixture.SignInAsAdminAsync();
+
+            (await ReportAsync(reporter, reported.Id, "  rude name  "))
+                .StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            var report = (await OpenReportsAsync(admin)).Single(r => r.ReportedUserId == reported.Id);
+
+            report.ReporterId.Should().Be(reporter.Id);
+            report.ReporterDisplayName.Should().Be(ApiFixture.DisplayName);
+            report.ReportedDisplayName.Should().Be(ApiFixture.DisplayName);
+            report.Reason.Should().Be("Harassment");
+            report.Details.Should().Be("rude name");
+        }
+
+        [Fact]
+        public async Task ReportingTheSamePersonTwice_KeepsOneOpenReport()
+        {
+            var (_, members) = await GroupOfAsync(2);
+            var (reporter, reported) = (members[0], members[1]);
+            var admin = await _fixture.SignInAsAdminAsync();
+
+            (await ReportAsync(reporter, reported.Id)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+            (await ReportAsync(reporter, reported.Id)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            (await OpenReportsAsync(admin)).Should().ContainSingle(r => r.ReportedUserId == reported.Id);
+        }
+
+        [Fact]
+        public async Task SomeoneWhoLeftTheGroup_CanStillBeReported()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+            var (owner, leaver) = (members[0], members[1]);
+
+            (await RemoveMemberAsync(owner, groupId, leaver.Id)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            (await ReportAsync(owner, leaver.Id)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+            (await ReportAsync(leaver, owner.Id)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        }
+
+        [Fact]
+        public async Task SomeoneWhoInvitedYou_CanBeReported_BeforeYouAnswer()
+        {
+            var inviter = await _fixture.RegisterAsync();
+            var invitee = await _fixture.RegisterAsync();
+            var groupId = await CreateGroupAsync(inviter);
+
+            (await inviter.Client.PostAsJsonAsync(
+                    $"/api/v1/groups/{groupId}/members", new InviteToGroupRequest(invitee.Id)))
+                .StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            (await ReportAsync(invitee, inviter.Id)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        }
+
+        [Fact]
+        public async Task SomeoneYouNeverMet_CannotBeReported()
+        {
+            var (_, members) = await GroupOfAsync(2);
+            var stranger = await _fixture.RegisterAsync();
+
+            (await ReportAsync(members[0], members[1].Id)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            (await ReportAsync(members[0], stranger.Id)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+            (await ReportAsync(members[0], Guid.NewGuid())).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        }
+
+        [Fact]
+        public async Task ReportingYourself_IsRejected()
+        {
+            var (_, members) = await GroupOfAsync(2);
+
+            (await ReportAsync(members[0], members[0].Id)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        [Fact]
+        public async Task OnlyAnAdmin_CanSeeOrResolveReports()
+        {
+            var user = await _fixture.RegisterAsync();
+            var admin = await _fixture.SignInAsAdminAsync();
+            var unknownReport = $"/api/v1/admin/reports/{Guid.NewGuid()}/resolution";
+
+            (await user.Client.GetAsync("/api/v1/admin/reports")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            (await user.Client.PostAsync(unknownReport, null)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+            (await admin.GetAsync("/api/v1/admin/reports")).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await admin.PostAsync(unknownReport, null)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        }
+
+        [Fact]
+        public async Task AResolvedReport_LeavesTheList_AndThePersonCanBeReportedAgain()
+        {
+            var (_, members) = await GroupOfAsync(2);
+            var (reporter, reported) = (members[0], members[1]);
+            var admin = await _fixture.SignInAsAdminAsync();
+
+            (await ReportAsync(reporter, reported.Id)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            var report = (await OpenReportsAsync(admin)).Single(r => r.ReportedUserId == reported.Id);
+
+            (await admin.PostAsync($"/api/v1/admin/reports/{report.Id}/resolution", null))
+                .StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            (await OpenReportsAsync(admin)).Should().NotContain(r => r.ReportedUserId == reported.Id);
+
+            (await ReportAsync(reporter, reported.Id)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            (await OpenReportsAsync(admin)).Should().ContainSingle(r => r.ReportedUserId == reported.Id);
+        }
+
+        [Fact]
+        public async Task TheAdminSeed_WorksOutsideDevelopment()
+        {
+            var email = $"a{Guid.NewGuid():N}@test.com";
+
+            await using var production = _fixture.WithWebHostBuilder(builder =>
+            {
+                builder.UseEnvironment("Production");
+                builder.UseSetting("Seed:AdminEmail", email);
+                builder.UseSetting("Seed:AdminPassword", "password123");
+            });
+
+            (await production.CreateClient().PostAsJsonAsync(
+                    "/api/v1/auth/login", new LoginRequest(email, "password123")))
+                .StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
         private static async Task<HttpResponseMessage> RemoveMemberAsync(
             TestUser actor, Guid groupId, Guid userId) =>
             await actor.Client.DeleteAsync($"/api/v1/groups/{groupId}/members/{userId}");
+
+        private static async Task<HttpResponseMessage> ReportAsync(
+            TestUser reporter, Guid userId, string? details = null) =>
+            await reporter.Client.PostAsJsonAsync(
+                $"/api/v1/users/{userId}/reports", new ReportUserRequest(ReportReason.Harassment, details));
+
+        private static async Task<List<OpenReportResponse>> OpenReportsAsync(HttpClient admin) =>
+            (await admin.GetFromJsonAsync<List<OpenReportResponse>>("/api/v1/admin/reports"))!;
 
         private static async Task<HttpResponseMessage> BlockAsync(TestUser blocker, TestUser blocked) =>
             await blocker.Client.PutAsync($"/api/v1/users/me/blocks/{blocked.Id}", null);

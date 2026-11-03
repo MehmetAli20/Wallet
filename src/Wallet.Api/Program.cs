@@ -160,27 +160,27 @@ if (app.Environment.IsDevelopment())
         options.SwaggerEndpoint("/openapi/v1.json", "Wallet API v1");
         options.RoutePrefix = "swagger";
     });
+}
 
-    var seedEmail = builder.Configuration["Seed:AdminEmail"];
-    var seedPassword = builder.Configuration["Seed:AdminPassword"];
+var seedEmail = builder.Configuration["Seed:AdminEmail"];
+var seedPassword = builder.Configuration["Seed:AdminPassword"];
 
-    var seedValues = new[] { seedEmail, seedPassword };
+var seedValues = new[] { seedEmail, seedPassword };
 
-    if (seedValues.All(string.IsNullOrWhiteSpace))
-    {
-        app.Logger.LogInformation("No admin seed configuration found, skipping seed.");
-    }
-    else if (seedValues.Any(string.IsNullOrWhiteSpace))
-    {
-        throw new InvalidOperationException(
-            "Admin seed is partially configured. Seed:AdminEmail and Seed:AdminPassword must both be set, or neither.");
-    }
-    else
-    {
-        using var scope = app.Services.CreateScope();
-        var seeder = scope.ServiceProvider.GetRequiredService<AdminUserSeeder>();
-        await seeder.SeedAsync(seedEmail!, seedPassword!);
-    }
+if (seedValues.All(string.IsNullOrWhiteSpace))
+{
+    app.Logger.LogInformation("No admin seed configuration found, skipping seed.");
+}
+else if (seedValues.Any(string.IsNullOrWhiteSpace))
+{
+    throw new InvalidOperationException(
+        "Admin seed is partially configured. Seed:AdminEmail and Seed:AdminPassword must both be set, or neither.");
+}
+else
+{
+    using var scope = app.Services.CreateScope();
+    var seeder = scope.ServiceProvider.GetRequiredService<AdminUserSeeder>();
+    await seeder.SeedAsync(seedEmail!, seedPassword!);
 }
 
 app.UseExceptionHandler();

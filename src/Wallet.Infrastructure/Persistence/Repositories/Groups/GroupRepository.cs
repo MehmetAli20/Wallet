@@ -74,6 +74,13 @@ namespace Wallet.Infrastructure.Persistence.Repositories.Groups
                 .ToListAsync(cancellationToken);
         }
 
+        public async Task<bool> EverSharedAGroupAsync(
+            Guid userA, Guid userB, CancellationToken cancellationToken = default) =>
+            await _context.Groups
+                .IgnoreQueryFilters()
+                .AnyAsync(g => g.Members.Any(m => m.UserId == userA)
+                            && g.Members.Any(m => m.UserId == userB), cancellationToken);
+
         public async Task AddAsync(Group group, CancellationToken cancellationToken = default)
         {
             await _context.Groups.AddAsync(group, cancellationToken);

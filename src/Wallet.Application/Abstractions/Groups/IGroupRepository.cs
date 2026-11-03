@@ -11,6 +11,7 @@ namespace Wallet.Application.Abstractions.Groups
         Task<GroupView?> GetGroupViewAsync(Guid groupId, CancellationToken cancellationToken = default);
         Task<IReadOnlyList<Group>> GetAllForPartyAsync(Guid partyId, CancellationToken cancellationToken = default);
         Task<IReadOnlyList<Group>> GetWithInvitationsBetweenAsync(Guid userA, Guid userB, CancellationToken cancellationToken = default);
+        Task<bool> EverSharedAGroupAsync(Guid userA, Guid userB, CancellationToken cancellationToken = default);
         Task AddAsync(Group group, CancellationToken cancellationToken = default);
         Task<Group?> GetByInvitationIdAsync(Guid invitationId, CancellationToken cancellationToken = default);
         Task<IReadOnlyList<PendingInvitation>> GetPendingInvitationsAsync(Guid userId, CancellationToken cancellationToken = default);

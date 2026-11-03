@@ -43,6 +43,7 @@ namespace Wallet.Api.Middleware
                 DisplayNameTakenException => (StatusCodes.Status409Conflict, "Display name taken"),
                 GroupNotFoundException => (StatusCodes.Status404NotFound, "Group not found"),
                 UserNotFoundException => (StatusCodes.Status404NotFound, "User not found"),
+                ReportNotFoundException => (StatusCodes.Status404NotFound, "Report not found"),
                 InvitationNotFoundException => (StatusCodes.Status404NotFound, "Invitation not found"),
                 InvalidGroupOperationException => (StatusCodes.Status400BadRequest, "Invalid group operation"),
                 InvalidExpenseException => (StatusCodes.Status400BadRequest, "Invalid expense"),

@@ -35,6 +35,7 @@ namespace Wallet.Infrastructure.Persistence
         public DbSet<ActivityEntry> ActivityEntries => Set<ActivityEntry>();
         public DbSet<GroupActivityRead> GroupActivityReads => Set<GroupActivityRead>();
         public DbSet<UserBlock> UserBlocks => Set<UserBlock>();
+        public DbSet<UserReport> UserReports => Set<UserReport>();
         protected override void OnModelCreating(ModelBuilder modelbuilder)
         {
             modelbuilder.ApplyConfigurationsFromAssembly(typeof(WalletDbContext).Assembly);
@@ -69,6 +70,8 @@ namespace Wallet.Infrastructure.Persistence
                 .HasQueryFilter(r => _currentUser.IsSystem || r.UserId == _currentUser.UserId);
             modelbuilder.Entity<UserBlock>()
                 .HasQueryFilter(b => _currentUser.IsSystem || b.BlockerId == _currentUser.UserId);
+            modelbuilder.Entity<UserReport>()
+                .HasQueryFilter(r => _currentUser.IsSystem || r.ReporterId == _currentUser.UserId);
             modelbuilder.Entity<Group>()
                 .HasQueryFilter(g => _currentUser.IsSystem
                     || g.Members.Any(m => m.UserId == _currentUser.UserId && m.Status == GroupMemberStatus.Active));
