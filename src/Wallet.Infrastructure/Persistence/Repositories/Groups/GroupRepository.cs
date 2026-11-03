@@ -62,6 +62,18 @@ namespace Wallet.Infrastructure.Persistence.Repositories.Groups
                 .ToListAsync(cancellationToken);
         }
 
+        public async Task<IReadOnlyList<Group>> GetWithInvitationsBetweenAsync(
+            Guid userA, Guid userB, CancellationToken cancellationToken = default)
+        {
+            return await _context.Groups
+                .IgnoreQueryFilters()
+                .Include(g => g.Members)
+                .Where(g => g.Members.Any(m => m.Status == GroupMemberStatus.Invited
+                    && ((m.UserId == userA && m.InvitedBy == userB)
+                     || (m.UserId == userB && m.InvitedBy == userA))))
+                .ToListAsync(cancellationToken);
+        }
+
         public async Task AddAsync(Group group, CancellationToken cancellationToken = default)
         {
             await _context.Groups.AddAsync(group, cancellationToken);

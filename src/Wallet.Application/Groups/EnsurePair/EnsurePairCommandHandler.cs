@@ -2,6 +2,7 @@ using MediatR;
 using Wallet.Application.Abstractions;
 using Wallet.Application.Abstractions.Groups;
 using Wallet.Application.Abstractions.Users;
+using Wallet.Application.Users;
 using Wallet.Domain.Common;
 using Wallet.Domain.Exceptions;
 using Wallet.Domain.Groups;
@@ -11,18 +12,18 @@ namespace Wallet.Application.Groups.EnsurePair
     public class EnsurePairCommandHandler : IRequestHandler<EnsurePairCommand, PairResult>
     {
         private readonly IGroupRepository _groups;
-        private readonly IUserRepository _users;
+        private readonly ContactPolicy _contacts;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICurrentUser _currentUser;
 
         public EnsurePairCommandHandler(
             IGroupRepository groups,
-            IUserRepository users,
+            ContactPolicy contacts,
             IUnitOfWork unitOfWork,
             ICurrentUser currentUser)
         {
             _groups = groups;
-            _users = users;
+            _contacts = contacts;
             _unitOfWork = unitOfWork;
             _currentUser = currentUser;
         }
@@ -32,10 +33,7 @@ namespace Wallet.Application.Groups.EnsurePair
             if (request.OtherUserId == _currentUser.UserId)
                 throw new InvalidGroupOperationException("A pair needs two different people.");
 
-            var other = await _users.GetByIdAsync(request.OtherUserId, cancellationToken);
-
-            if (other is null || other.IsDeleted)
-                throw new InvalidGroupOperationException("User not found.");
+            await _contacts.EnsureCanReachAsync(request.OtherUserId, cancellationToken);
 
             var currency = Money.NormalizeCurrency(request.Currency);
 

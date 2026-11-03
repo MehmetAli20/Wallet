@@ -42,6 +42,7 @@ namespace Wallet.Api.Middleware
                 EmailAlreadyExistsException => (StatusCodes.Status409Conflict, "Email already exists"),
                 DisplayNameTakenException => (StatusCodes.Status409Conflict, "Display name taken"),
                 GroupNotFoundException => (StatusCodes.Status404NotFound, "Group not found"),
+                UserNotFoundException => (StatusCodes.Status404NotFound, "User not found"),
                 InvitationNotFoundException => (StatusCodes.Status404NotFound, "Invitation not found"),
                 InvalidGroupOperationException => (StatusCodes.Status400BadRequest, "Invalid group operation"),
                 InvalidExpenseException => (StatusCodes.Status400BadRequest, "Invalid expense"),

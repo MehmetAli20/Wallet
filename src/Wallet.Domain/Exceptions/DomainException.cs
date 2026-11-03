@@ -48,4 +48,9 @@ namespace Wallet.Domain.Exceptions
     {
         public ExpenseNotFoundException(Guid expenseId) : base($"Expense {expenseId} was not found.") { }
     }
+
+    public class UserNotFoundException : DomainException
+    {
+        public UserNotFoundException(Guid userId) : base($"User {userId} was not found.") { }
+    }
 }

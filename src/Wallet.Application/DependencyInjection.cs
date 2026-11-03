@@ -18,6 +18,7 @@ namespace Wallet.Application
             services.AddScoped<TransferService>();
             services.AddScoped<ExpensePostingService>();
             services.AddScoped<AdminUserSeeder>();
+            services.AddScoped<ContactPolicy>();
             services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
             services.AddMediatR(cfg =>
             {

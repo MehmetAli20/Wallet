@@ -160,6 +160,19 @@ namespace Wallet.Domain.Groups
             Raise(new InvitationDeclined(Id, userId, DateTimeOffset.UtcNow));
         }
 
+        public void DropInvitationsBetween(Guid userA, Guid userB)
+        {
+            var pending = _members
+                .Where(m => m.Status == GroupMemberStatus.Invited
+                         && ((m.UserId == userA && m.InvitedBy == userB)
+                          || (m.UserId == userB && m.InvitedBy == userA)))
+                .Select(m => m.UserId)
+                .ToList();
+
+            foreach (var userId in pending)
+                DeclineInvitation(userId);
+        }
+
         public void Accept(Guid userId)
         {
             var member = _members.SingleOrDefault(m => m.UserId == userId)

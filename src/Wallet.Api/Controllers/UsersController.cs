@@ -2,10 +2,13 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Wallet.Api.Authentication;
 using Wallet.Api.Contracts.Users;
+using Wallet.Application.Users.BlockUser;
 using Wallet.Application.Users.DeleteCurrentUser;
+using Wallet.Application.Users.GetBlockedUsers;
 using Wallet.Application.Users.GetCurrentUser;
 using Wallet.Application.Users.RenameCurrentUser;
 using Wallet.Application.Users.RevokeAllSessions;
+using Wallet.Application.Users.UnblockUser;
 
 namespace Wallet.Api.Controllers
 {
@@ -55,6 +58,31 @@ namespace Wallet.Api.Controllers
             await _sender.Send(new DeleteCurrentUserCommand(request.Password), cancellationToken);
 
             Response.Cookies.Delete(SessionAuthentication.CookieName, SessionAuthentication.CookieOptions(null));
+
+            return NoContent();
+        }
+
+        [HttpGet("me/blocks")]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public async Task<ActionResult<List<BlockedUserResponse>>> GetBlocks(CancellationToken cancellationToken)
+        {
+            var blocked = await _sender.Send(new GetBlockedUsersQuery(), cancellationToken);
+
+            return blocked.Select(b => b.ToBlockedUserResponse()).ToList();
+        }
+
+        [HttpPut("me/blocks/{userId:guid}")]
+        public async Task<IActionResult> Block(Guid userId, CancellationToken cancellationToken)
+        {
+            await _sender.Send(new BlockUserCommand(userId), cancellationToken);
+
+            return NoContent();
+        }
+
+        [HttpDelete("me/blocks/{userId:guid}")]
+        public async Task<IActionResult> Unblock(Guid userId, CancellationToken cancellationToken)
+        {
+            await _sender.Send(new UnblockUserCommand(userId), cancellationToken);
 
             return NoContent();
         }

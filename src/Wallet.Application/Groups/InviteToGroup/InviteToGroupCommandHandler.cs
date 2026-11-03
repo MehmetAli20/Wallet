@@ -5,6 +5,7 @@ using System.Text;
 using Wallet.Application.Abstractions;
 using Wallet.Application.Abstractions.Groups;
 using Wallet.Application.Abstractions.Users;
+using Wallet.Application.Users;
 using Wallet.Domain.Exceptions;
 
 namespace Wallet.Application.Groups.InviteToGroup
@@ -12,15 +13,15 @@ namespace Wallet.Application.Groups.InviteToGroup
     public class InviteToGroupCommandHandler : IRequestHandler<InviteToGroupCommand>
     {
         private readonly IGroupRepository _groups;
-        private readonly IUserRepository _users;
+        private readonly ContactPolicy _contacts;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICurrentUser _currentUser;
 
 
-        public InviteToGroupCommandHandler(IGroupRepository groups, IUserRepository users, IUnitOfWork unitOfWork, ICurrentUser currentUser)
+        public InviteToGroupCommandHandler(IGroupRepository groups, ContactPolicy contacts, IUnitOfWork unitOfWork, ICurrentUser currentUser)
         {
             _groups = groups;
-            _users = users;
+            _contacts = contacts;
             _unitOfWork = unitOfWork;
             _currentUser = currentUser;
         }
@@ -29,12 +30,7 @@ namespace Wallet.Application.Groups.InviteToGroup
         {
             var group = await _groups.GetByIdAsync(request.GroupId) ?? throw new GroupNotFoundException(request.GroupId);
             
-            var invitee = await _users.GetByIdAsync(request.UserId, cancellationToken);
-
-            if (invitee is null || invitee.IsDeleted)
-            {
-                throw new InvalidGroupOperationException("User not found.");
-            }
+            await _contacts.EnsureCanReachAsync(request.UserId, cancellationToken);
 
             group.Invite(request.UserId, _currentUser.UserId);
             await _unitOfWork.SaveChangesAsync(cancellationToken);

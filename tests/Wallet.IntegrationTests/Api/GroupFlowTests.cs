@@ -1591,9 +1591,96 @@ namespace Wallet.IntegrationTests.Api
                 .StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
 
+        [Fact]
+        public async Task SomeoneYouBlocked_CannotInviteYouOrStartAPairWithYou()
+        {
+            var (_, members) = await GroupOfAsync(2);
+            var (blocker, blocked) = (members[0], members[1]);
+
+            (await BlockAsync(blocker, blocked)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            var otherGroup = await CreateGroupAsync(blocked);
+
+            (await blocked.Client.PostAsJsonAsync(
+                    $"/api/v1/groups/{otherGroup}/members", new InviteToGroupRequest(blocker.Id)))
+                .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+            (await blocked.Client.PostAsJsonAsync(
+                    "/api/v1/groups/pairs", new EnsurePairRequest(blocker.Id, "TRY")))
+                .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        [Fact]
+        public async Task YouCannotPairWithSomeoneYouBlocked_UntilYouUnblockThem()
+        {
+            var (_, members) = await GroupOfAsync(2);
+            var (blocker, blocked) = (members[0], members[1]);
+
+            await BlockAsync(blocker, blocked);
+
+            (await blocker.Client.PostAsJsonAsync(
+                    "/api/v1/groups/pairs", new EnsurePairRequest(blocked.Id, "TRY")))
+                .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+            (await blocker.Client.DeleteAsync($"/api/v1/users/me/blocks/{blocked.Id}"))
+                .StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            (await blocker.Client.PostAsJsonAsync(
+                    "/api/v1/groups/pairs", new EnsurePairRequest(blocked.Id, "TRY")))
+                .StatusCode.Should().Be(HttpStatusCode.Created);
+        }
+
+        [Fact]
+        public async Task BlockingSomeone_DropsTheirPendingInvitation()
+        {
+            var (_, members) = await GroupOfAsync(2);
+            var (blocker, blocked) = (members[0], members[1]);
+
+            var otherGroup = await CreateGroupAsync(blocked);
+            (await blocked.Client.PostAsJsonAsync(
+                    $"/api/v1/groups/{otherGroup}/members", new InviteToGroupRequest(blocker.Id)))
+                .StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            await BlockAsync(blocker, blocked);
+
+            var invitations = await blocker.Client.GetFromJsonAsync<List<InvitationResponse>>("/api/v1/invitations");
+
+            invitations!.Should().NotContain(i => i.GroupId == otherGroup);
+        }
+
+        [Fact]
+        public async Task BlockedUsers_AreListedOnce_ByName()
+        {
+            var (_, members) = await GroupOfAsync(2);
+            var (blocker, blocked) = (members[0], members[1]);
+
+            (await BlockAsync(blocker, blocked)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+            (await BlockAsync(blocker, blocked)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            var blocks = await blocker.Client.GetFromJsonAsync<List<BlockedUserResponse>>("/api/v1/users/me/blocks");
+
+            blocks!.Should().ContainSingle()
+                .Which.Should().Be(new BlockedUserResponse(blocked.Id, ApiFixture.DisplayName));
+        }
+
+        [Fact]
+        public async Task BlockingYourselfOrAnUnknownUser_IsRejected()
+        {
+            var user = await _fixture.RegisterAsync();
+
+            (await user.Client.PutAsync($"/api/v1/users/me/blocks/{user.Id}", null))
+                .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+            (await user.Client.PutAsync($"/api/v1/users/me/blocks/{Guid.NewGuid()}", null))
+                .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        }
+
         private static async Task<HttpResponseMessage> RemoveMemberAsync(
             TestUser actor, Guid groupId, Guid userId) =>
             await actor.Client.DeleteAsync($"/api/v1/groups/{groupId}/members/{userId}");
+
+        private static async Task<HttpResponseMessage> BlockAsync(TestUser blocker, TestUser blocked) =>
+            await blocker.Client.PutAsync($"/api/v1/users/me/blocks/{blocked.Id}", null);
 
         private static async Task<HttpResponseMessage> DeleteAccountAsync(TestUser user, string password)
         {

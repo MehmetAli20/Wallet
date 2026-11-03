@@ -10,10 +10,12 @@ using Wallet.Application.Groups.CreateGroup;
 using Wallet.Application.Groups.EnsurePair;
 using Wallet.Application.Groups.InviteToGroup;
 using Wallet.Application.Transfers.TransferMoney;
+using Wallet.Application.Users.BlockUser;
 using Wallet.Application.Users.DeleteCurrentUser;
 using Wallet.Application.Users.Login;
 using Wallet.Application.Users.Register;
 using Wallet.Application.Users.RenameCurrentUser;
+using Wallet.Application.Users.UnblockUser;
 using Wallet.Application.Invitations.AcceptInvitation;
 using Wallet.Application.Invitations.DeclineInvitation;
 using Wallet.Domain.Common;
@@ -462,5 +464,15 @@ namespace Wallet.UnitTests.Application
         public void DeleteCurrentUser_WithoutPassword_Fails() =>
             Errors(new DeleteCurrentUserCommandValidator(), new DeleteCurrentUserCommand(""))
                 .Should().Contain(nameof(DeleteCurrentUserCommand.Password));
+
+        [Fact]
+        public void BlockUser_EmptyId_Fails() =>
+            Errors(new BlockUserCommandValidator(), new BlockUserCommand(Guid.Empty))
+                .Should().Contain(nameof(BlockUserCommand.UserId));
+
+        [Fact]
+        public void UnblockUser_EmptyId_Fails() =>
+            Errors(new UnblockUserCommandValidator(), new UnblockUserCommand(Guid.Empty))
+                .Should().Contain(nameof(UnblockUserCommand.UserId));
     }
 }

@@ -18,7 +18,7 @@ namespace Wallet.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -672,6 +672,24 @@ namespace Wallet.Infrastructure.Migrations
                     b.ToTable("Users", (string)null);
                 });
 
+            modelBuilder.Entity("Wallet.Domain.Users.UserBlock", b =>
+                {
+                    b.Property<Guid>("BlockerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BlockedId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("BlockedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("BlockerId", "BlockedId");
+
+                    b.HasIndex("BlockedId");
+
+                    b.ToTable("UserBlocks", (string)null);
+                });
+
             modelBuilder.Entity("Wallet.Infrastructure.Persistence.Idempotency.IdempotencyRecord", b =>
                 {
                     b.Property<Guid>("UserId")
@@ -777,6 +795,21 @@ namespace Wallet.Infrastructure.Migrations
                     b.HasOne("Wallet.Domain.Users.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Wallet.Domain.Users.UserBlock", b =>
+                {
+                    b.HasOne("Wallet.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("BlockedId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Wallet.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("BlockerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

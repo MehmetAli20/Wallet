@@ -399,6 +399,22 @@ namespace Wallet.UnitTests.Domain.Groups
         }
 
         [Fact]
+        public void DroppingInvitationsBetweenTwoPeople_LeavesOtherInvitations()
+        {
+            var admin = Guid.NewGuid();
+            var blocked = Guid.NewGuid();
+            var other = Guid.NewGuid();
+            var group = NewNamed(admin);
+            group.Invite(blocked, admin);
+            group.Invite(other, admin);
+
+            group.DropInvitationsBetween(admin, blocked);
+
+            group.Members.Should().NotContain(m => m.UserId == blocked);
+            group.Members.Should().Contain(m => m.UserId == other && m.Status == GroupMemberStatus.Invited);
+        }
+
+        [Fact]
         public void IsActiveMember_IsFalseUntilInviteIsAccepted()
         {
             var group = NewNamed();
