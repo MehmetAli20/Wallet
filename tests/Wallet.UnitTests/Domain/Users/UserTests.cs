@@ -76,5 +76,28 @@ namespace Wallet.UnitTests.Domain.Users
 
             user.Email.Should().Be("test@example.com");
         }
+
+        [Fact]
+        public void Deleting_RemovesEverythingThatIdentifiesTheUser()
+        {
+            var user = new User(Guid.NewGuid(), "test@test.com", "hashedpassword", UserRole.User, "Ayşe Yılmaz");
+
+            user.Delete();
+
+            user.Email.Should().BeNull();
+            user.PasswordHash.Should().BeNull();
+            user.DisplayName.Should().Be(User.DeletedDisplayName);
+            user.IsPlaceholder.Should().BeFalse();
+            user.IsDeleted.Should().BeTrue();
+        }
+
+        [Fact]
+        public void APlaceholder_IsNotADeletedUser()
+        {
+            var placeholder = User.CreatePlaceholder(Guid.NewGuid(), "Mehmet");
+
+            placeholder.Email.Should().BeNull();
+            placeholder.IsDeleted.Should().BeFalse();
+        }
     }
 }

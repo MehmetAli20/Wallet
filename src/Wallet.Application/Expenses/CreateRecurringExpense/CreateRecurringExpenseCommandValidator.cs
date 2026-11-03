@@ -18,7 +18,13 @@ namespace Wallet.Application.Expenses.CreateRecurringExpense
                 .WithMessage("Amount must be in whole cents.");
             RuleFor(x => x.Description).NotEmpty().MaximumLength(200);
             RuleFor(x => x.Interval).IsInEnum();
-            RuleFor(x => x.FirstOccurrence).NotEqual(default(DateTimeOffset));
+            RuleFor(x => x.FirstOccurrence)
+                .Cascade(CascadeMode.Stop)
+                .NotEqual(default(DateTimeOffset))
+                .Must(d => d >= DateTimeOffset.UtcNow.AddDays(-1))
+                .WithMessage("The first occurrence cannot be more than a day in the past.")
+                .Must(d => d <= DateTimeOffset.UtcNow.AddYears(1))
+                .WithMessage("The first occurrence must be within a year.");
             RuleFor(x => x.Participants)
                 .Cascade(CascadeMode.Stop)
                 .NotEmpty()

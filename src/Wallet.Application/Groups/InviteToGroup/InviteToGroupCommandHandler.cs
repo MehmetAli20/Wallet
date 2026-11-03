@@ -29,7 +29,9 @@ namespace Wallet.Application.Groups.InviteToGroup
         {
             var group = await _groups.GetByIdAsync(request.GroupId) ?? throw new GroupNotFoundException(request.GroupId);
             
-            if(!await _users.ExistsAsync(request.UserId, cancellationToken))
+            var invitee = await _users.GetByIdAsync(request.UserId, cancellationToken);
+
+            if (invitee is null || invitee.IsDeleted)
             {
                 throw new InvalidGroupOperationException("User not found.");
             }

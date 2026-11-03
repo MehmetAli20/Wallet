@@ -33,7 +33,8 @@ namespace Wallet.IntegrationTests.Transfers
                 new TransferService(),
                 new SettlementRepository(context),
                 TestCurrentUser.For(senderId),
-                new UserRepository(context));
+                new UserRepository(context),
+                new GroupBalanceRepository(context));
 
         private async Task SeedUserAsync(Guid userId)
         {

@@ -48,5 +48,52 @@ namespace Wallet.UnitTests.Domain.Settlements
 
             act.Should().Throw<InvalidTransferException>();
         }
+
+        [Fact]
+        public void SomeoneWhoLeft_CanBePaid_UpToWhatIsOpen()
+        {
+            var (group, payer, payee) = GroupOfTwo();
+            group.Remove(payee, payer);
+
+            var settlement = Settlement.RecordWithFormerMember(
+                Guid.NewGuid(), group, payer, payee, 30m, 30m, DateTimeOffset.UtcNow);
+
+            settlement.Amount.Amount.Should().Be(30m);
+        }
+
+        [Fact]
+        public void PayingSomeoneWhoLeft_MoreThanIsOpen_IsRejected()
+        {
+            var (group, payer, payee) = GroupOfTwo();
+            group.Remove(payee, payer);
+
+            var act = () => Settlement.RecordWithFormerMember(
+                Guid.NewGuid(), group, payer, payee, 30.01m, 30m, DateTimeOffset.UtcNow);
+
+            act.Should().Throw<InvalidTransferException>();
+        }
+
+        [Fact]
+        public void TwoActiveMembers_CannotSettleAsIfOneHadLeft()
+        {
+            var (group, payer, payee) = GroupOfTwo();
+
+            var act = () => Settlement.RecordWithFormerMember(
+                Guid.NewGuid(), group, payer, payee, 30m, 30m, DateTimeOffset.UtcNow);
+
+            act.Should().Throw<InvalidTransferException>();
+        }
+
+        [Fact]
+        public void SomeoneOutsideTheGroup_CannotSettleWithSomeoneWhoLeft()
+        {
+            var (group, payer, payee) = GroupOfTwo();
+            group.Remove(payee, payer);
+
+            var act = () => Settlement.RecordWithFormerMember(
+                Guid.NewGuid(), group, Guid.NewGuid(), payee, 30m, 30m, DateTimeOffset.UtcNow);
+
+            act.Should().Throw<InvalidTransferException>();
+        }
     }
 }

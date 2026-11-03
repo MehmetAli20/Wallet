@@ -28,6 +28,44 @@ namespace Wallet.Domain.Settlements
             decimal amount,
             DateTimeOffset occurredAt)
         {
+            EnsureTwoParties(id, group, payerId, payeeId);
+
+            if (!group.IsActiveMember(payerId))
+                throw new InvalidTransferException("The payer is not an active member of this group.");
+
+            if (!group.IsActiveMember(payeeId))
+                throw new InvalidTransferException("The recipient is not an active member of this group.");
+
+            return Create(id, group, payerId, payeeId, amount, occurredAt);
+        }
+
+        public static Settlement RecordWithFormerMember(
+            Guid id,
+            Group group,
+            Guid payerId,
+            Guid payeeId,
+            decimal amount,
+            decimal openDebt,
+            DateTimeOffset occurredAt)
+        {
+            EnsureTwoParties(id, group, payerId, payeeId);
+
+            var payerLeft = group.HasLeft(payerId) && group.IsActiveMember(payeeId);
+            var payeeLeft = group.HasLeft(payeeId) && group.IsActiveMember(payerId);
+
+            if (!payerLeft && !payeeLeft)
+                throw new InvalidTransferException(
+                    "A settlement with a former member needs one active member and one who left.");
+
+            if (amount > openDebt)
+                throw new InvalidTransferException(
+                    "A settlement with someone who left cannot exceed what is open between you.");
+
+            return Create(id, group, payerId, payeeId, amount, occurredAt);
+        }
+
+        private static void EnsureTwoParties(Guid id, Group group, Guid payerId, Guid payeeId)
+        {
             if (id == Guid.Empty)
                 throw new ArgumentException("Settlement id cannot be empty.", nameof(id));
 
@@ -36,13 +74,16 @@ namespace Wallet.Domain.Settlements
 
             if (payerId == payeeId)
                 throw new InvalidTransferException("A settlement needs two different people.");
+        }
 
-            if (!group.IsActiveMember(payerId))
-                throw new InvalidTransferException("The payer is not an active member of this group.");
-
-            if (!group.IsActiveMember(payeeId))
-                throw new InvalidTransferException("The recipient is not an active member of this group.");
-
+        private static Settlement Create(
+            Guid id,
+            Group group,
+            Guid payerId,
+            Guid payeeId,
+            decimal amount,
+            DateTimeOffset occurredAt)
+        {
             if (amount <= 0)
                 throw new InvalidTransferException("Settlement amount must be greater than zero.");
 

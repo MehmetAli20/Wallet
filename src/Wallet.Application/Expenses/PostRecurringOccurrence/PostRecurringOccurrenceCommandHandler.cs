@@ -10,7 +10,7 @@ using Wallet.Domain.Expenses;
 namespace Wallet.Application.Expenses.PostRecurringOccurrence
 {
     public class PostRecurringOccurrenceCommandHandler
-        : IRequestHandler<PostRecurringOccurrenceCommand, Guid>
+        : IRequestHandler<PostRecurringOccurrenceCommand, Guid?>
     {
         private readonly IRecurringExpenseRepository _recurring;
         private readonly IExpenseRepository _expenses;
@@ -35,7 +35,7 @@ namespace Wallet.Application.Expenses.PostRecurringOccurrence
             _postingService = postingService;
         }
 
-        public async Task<Guid> Handle(
+        public async Task<Guid?> Handle(
             PostRecurringOccurrenceCommand request, CancellationToken cancellationToken)
         {
             var recurring = await _recurring.GetByIdAsync(request.RecurringExpenseId, cancellationToken)
@@ -43,6 +43,13 @@ namespace Wallet.Application.Expenses.PostRecurringOccurrence
 
             var group = await _groups.GetByIdAsync(recurring.GroupId, cancellationToken)
                 ?? throw new GroupNotFoundException(recurring.GroupId);
+
+            if (!recurring.CanPostIn(group))
+            {
+                recurring.Cancel();
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                return null;
+            }
 
             var participants = recurring.ParticipantIds();
 

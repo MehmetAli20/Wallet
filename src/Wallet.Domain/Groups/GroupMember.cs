@@ -82,5 +82,10 @@ namespace Wallet.Domain.Groups
             InvitedAt = DateTimeOffset.UtcNow;
             JoinedAt = null;
         }
+
+        internal void MakeAdmin()
+        {
+            Role = GroupMemberRole.Admin;
+        }
     }
 }

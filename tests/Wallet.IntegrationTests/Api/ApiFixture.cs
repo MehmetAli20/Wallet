@@ -11,7 +11,7 @@ using Wallet.Infrastructure.Persistence;
 
 namespace Wallet.IntegrationTests.Api
 {
-    public sealed record TestUser(Guid Id, HttpClient Client);
+    public sealed record TestUser(Guid Id, HttpClient Client, string Email);
 
     public class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
     {
@@ -63,7 +63,7 @@ namespace Wallet.IntegrationTests.Api
 
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-            return new TestUser(userId, client);
+            return new TestUser(userId, client, email);
         }
     }
 }

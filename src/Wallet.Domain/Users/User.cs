@@ -8,6 +8,7 @@ namespace Wallet.Domain.Users
     public class User
     {
         public const int DisplayNameMaxLength = 100;
+        public const string DeletedDisplayName = "Deleted user";
 
         public Guid Id { get; private set; }
         public string DisplayName { get; private set; }
@@ -15,6 +16,7 @@ namespace Wallet.Domain.Users
         public string? PasswordHash { get; private set; }
         public UserRole Role { get; private set; }
         public bool IsPlaceholder { get; private set; }
+        public bool IsDeleted => !IsPlaceholder && Email is null;
 
         private User()
         {
@@ -83,6 +85,13 @@ namespace Wallet.Domain.Users
         public void Rename(string displayName)
         {
             DisplayName = NormalizeDisplayName(displayName);
+        }
+
+        public void Delete()
+        {
+            Email = null;
+            PasswordHash = null;
+            DisplayName = DeletedDisplayName;
         }
 
         public static string NormalizeEmail(string email)

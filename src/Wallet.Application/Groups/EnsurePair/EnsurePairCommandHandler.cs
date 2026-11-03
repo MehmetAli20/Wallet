@@ -32,7 +32,9 @@ namespace Wallet.Application.Groups.EnsurePair
             if (request.OtherUserId == _currentUser.UserId)
                 throw new InvalidGroupOperationException("A pair needs two different people.");
 
-            if (!await _users.ExistsAsync(request.OtherUserId, cancellationToken))
+            var other = await _users.GetByIdAsync(request.OtherUserId, cancellationToken);
+
+            if (other is null || other.IsDeleted)
                 throw new InvalidGroupOperationException("User not found.");
 
             var currency = Money.NormalizeCurrency(request.Currency);

@@ -1413,9 +1413,197 @@ namespace Wallet.IntegrationTests.Api
             response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         }
 
+        [Fact]
+        public async Task DeletingAnAccount_KeepsItsBalance_UnderADeletedUser()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+            var (owner, leaver) = (members[0], members[1]);
+
+            await CreateExpenseAsync(owner, groupId, 100m, members);
+
+            (await DeleteAccountAsync(leaver, "password123")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            var deleted = (await GroupsAsync(owner)).Single(g => g.Id == groupId)
+                .Members.Single(m => m.UserId == leaver.Id);
+
+            deleted.DisplayName.Should().Be("Deleted user");
+            deleted.Status.Should().Be("Removed");
+
+            var simplified = await BalanceAsync(owner, groupId, simplify: true);
+
+            Net(simplified, leaver.Id).Should().Be(-50m);
+            simplified.Debts.Should().ContainSingle(d =>
+                d.DebtorId == leaver.Id && d.CreditorId == owner.Id && d.Amount == 50m);
+        }
+
+        [Fact]
+        public async Task ADeletedUser_CannotBeChargedAgain()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+
+            (await DeleteAccountAsync(members[1], "password123")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            var response = await PostExpenseAsync(members[0], new CreateExpenseRequest(
+                groupId, members[0].Id, 100m, "Market", DateTimeOffset.UtcNow, Participants(members)));
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        [Fact]
+        public async Task DeletingAnAccount_EndsItsSessions_AndFreesItsEmail()
+        {
+            var user = await _fixture.RegisterAsync();
+
+            (await DeleteAccountAsync(user, "password123")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            (await user.Client.GetAsync("/api/v1/users/me")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+            var anonymous = _fixture.CreateClient();
+
+            (await anonymous.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest(user.Email, "password123")))
+                .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+            (await anonymous.PostAsJsonAsync("/api/v1/auth/register",
+                    new RegisterRequest(user.Email, "password123", ApiFixture.DisplayName)))
+                .StatusCode.Should().Be(HttpStatusCode.Created);
+        }
+
+        [Fact]
+        public async Task AWrongPassword_DoesNotDeleteTheAccount()
+        {
+            var user = await _fixture.RegisterAsync();
+
+            (await DeleteAccountAsync(user, "wrong-password")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+            (await user.Client.GetAsync("/api/v1/users/me")).StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        [Fact]
+        public async Task WhenTheOnlyAdminDeletesTheirAccount_TheEarliestRealMemberTakesOver()
+        {
+            var owner = await _fixture.RegisterAsync();
+            var groupId = await CreateGroupAsync(owner);
+            var placeholder = await AddPlaceholderAsync(owner, groupId, "Mehmet");
+            var member = await _fixture.RegisterAsync();
+            await JoinAsync(owner, groupId, member);
+
+            (await DeleteAccountAsync(owner, "password123")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            var group = (await GroupsAsync(member)).Single(g => g.Id == groupId);
+
+            group.Members.Single(m => m.UserId == member.Id).Role.Should().Be("Admin");
+            group.Members.Single(m => m.UserId == placeholder).Role.Should().Be("Member");
+        }
+
+        [Fact]
+        public async Task SomeoneWhoOwesADeletedUser_CanPayThem_UpToWhatTheyOwe()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+            var (owner, leaver) = (members[0], members[1]);
+
+            await CreateExpenseAsync(leaver, groupId, 100m, members);
+
+            (await DeleteAccountAsync(leaver, "password123")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            (await SettleAsync(owner, groupId, leaver, 50.01m)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await SettleAsync(owner, groupId, leaver, 50m)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            var after = await BalanceAsync(owner, groupId);
+
+            Net(after, owner.Id).Should().Be(0m);
+            after.Debts.Should().BeEmpty();
+        }
+
+        [Fact]
+        public async Task TheOneADeletedUserOwed_CanRecordTheirPayment()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+            var (owner, leaver) = (members[0], members[1]);
+
+            await CreateExpenseAsync(owner, groupId, 100m, members);
+
+            (await DeleteAccountAsync(leaver, "password123")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            (await SettleAsync(owner, groupId, owner, 50m, onBehalfOf: leaver.Id))
+                .StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            var after = await BalanceAsync(owner, groupId);
+
+            Net(after, owner.Id).Should().Be(0m);
+            after.Debts.Should().BeEmpty();
+        }
+
+        [Fact]
+        public async Task ABystander_CannotSettleWithADeletedUser()
+        {
+            var (groupId, members) = await GroupOfAsync(3);
+            var (owner, leaver, bystander) = (members[0], members[1], members[2]);
+
+            await CreateExpenseAsync(owner, groupId, 90m, members);
+
+            (await DeleteAccountAsync(leaver, "password123")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            (await SettleAsync(bystander, groupId, owner, 30m, onBehalfOf: leaver.Id))
+                .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await SettleAsync(bystander, groupId, leaver, 30m))
+                .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+            var after = await BalanceAsync(owner, groupId);
+
+            Net(after, leaver.Id).Should().Be(-30m);
+            Net(after, bystander.Id).Should().Be(-30m);
+        }
+
+        [Fact]
+        public async Task AfterAnAccountIsDeleted_SimplifyingDoesNotMoveOthersDebtsOntoThem()
+        {
+            var (groupId, members) = await GroupOfAsync(3);
+            var (owner, leaver, third) = (members[0], members[1], members[2]);
+
+            await CreateExpenseAsync(leaver, groupId, 60m, new[] { leaver, owner });
+            await CreateExpenseAsync(owner, groupId, 60m, new[] { owner, third });
+
+            (await DeleteAccountAsync(leaver, "password123")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            var simplified = await BalanceAsync(owner, groupId, simplify: true);
+
+            simplified.Debts.Should().BeEquivalentTo(new[]
+            {
+                new PairwiseDebtResponse(owner.Id, leaver.Id, 30m),
+                new PairwiseDebtResponse(third.Id, owner.Id, 30m)
+            });
+        }
+
+        [Fact]
+        public async Task ADeletedUser_CannotBeInvitedOrPairedWith()
+        {
+            var (groupId, members) = await GroupOfAsync(2);
+            var (owner, leaver) = (members[0], members[1]);
+
+            (await DeleteAccountAsync(leaver, "password123")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            (await owner.Client.PostAsJsonAsync(
+                    $"/api/v1/groups/{groupId}/members", new InviteToGroupRequest(leaver.Id)))
+                .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+            (await owner.Client.PostAsJsonAsync(
+                    "/api/v1/groups/pairs", new EnsurePairRequest(leaver.Id, "TRY")))
+                .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
         private static async Task<HttpResponseMessage> RemoveMemberAsync(
             TestUser actor, Guid groupId, Guid userId) =>
             await actor.Client.DeleteAsync($"/api/v1/groups/{groupId}/members/{userId}");
+
+        private static async Task<HttpResponseMessage> DeleteAccountAsync(TestUser user, string password)
+        {
+            using var message = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/users/me")
+            {
+                Content = JsonContent.Create(new DeleteCurrentUserRequest(password))
+            };
+
+            return await user.Client.SendAsync(message);
+        }
 
         private static async Task<IssuedTokenResponse> IssueInviteLinkAsync(
             TestUser member, Guid groupId, Guid? placeholderId = null, int? maxUses = null)

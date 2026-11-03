@@ -10,6 +10,7 @@ using Wallet.Application.Groups.CreateGroup;
 using Wallet.Application.Groups.EnsurePair;
 using Wallet.Application.Groups.InviteToGroup;
 using Wallet.Application.Transfers.TransferMoney;
+using Wallet.Application.Users.DeleteCurrentUser;
 using Wallet.Application.Users.Login;
 using Wallet.Application.Users.Register;
 using Wallet.Application.Users.RenameCurrentUser;
@@ -333,6 +334,21 @@ namespace Wallet.UnitTests.Application
                 .Should().Contain(nameof(CreateRecurringExpenseCommand.FixedShares));
         }
 
+        [Fact]
+        public void CreateRecurringExpense_FirstOccurrenceEarlierToday_Passes() =>
+            IsValid(new CreateRecurringExpenseCommandValidator(), ValidRecurring() with { FirstOccurrence = DateTimeOffset.UtcNow.AddHours(-23) })
+                .Should().BeTrue();
+
+        [Fact]
+        public void CreateRecurringExpense_FirstOccurrenceMoreThanADayAgo_Fails() =>
+            Errors(new CreateRecurringExpenseCommandValidator(), ValidRecurring() with { FirstOccurrence = DateTimeOffset.UtcNow.AddDays(-2) })
+                .Should().Contain(nameof(CreateRecurringExpenseCommand.FirstOccurrence));
+
+        [Fact]
+        public void CreateRecurringExpense_FirstOccurrenceMoreThanAYearAhead_Fails() =>
+            Errors(new CreateRecurringExpenseCommandValidator(), ValidRecurring() with { FirstOccurrence = DateTimeOffset.UtcNow.AddYears(1).AddDays(1) })
+                .Should().Contain(nameof(CreateRecurringExpenseCommand.FirstOccurrence));
+
         private static LoginCommand ValidLogin() => new("ahmet@test.com", "password123");
 
         [Fact]
@@ -441,5 +457,10 @@ namespace Wallet.UnitTests.Application
         public void RenameCurrentUser_InvalidName_Fails(string displayName) =>
             Errors(new RenameCurrentUserCommandValidator(), new RenameCurrentUserCommand(displayName))
                 .Should().Contain(nameof(RenameCurrentUserCommand.DisplayName));
+
+        [Fact]
+        public void DeleteCurrentUser_WithoutPassword_Fails() =>
+            Errors(new DeleteCurrentUserCommandValidator(), new DeleteCurrentUserCommand(""))
+                .Should().Contain(nameof(DeleteCurrentUserCommand.Password));
     }
 }

@@ -417,5 +417,82 @@ namespace Wallet.UnitTests.Domain.Groups
         {
             NewNamed().IsActiveMember(Guid.NewGuid()).Should().BeFalse();
         }
+
+        [Fact]
+        public void ADeletedUser_LeavesTheGroup()
+        {
+            var admin = Guid.NewGuid();
+            var member = Guid.NewGuid();
+            var group = NewNamed(admin);
+            group.Invite(member, admin);
+            group.Accept(member);
+
+            group.RemoveDeletedUser(member, []);
+
+            group.IsActiveMember(member).Should().BeFalse();
+            group.Members.Single(m => m.UserId == member).Status.Should().Be(GroupMemberStatus.Removed);
+        }
+
+        [Fact]
+        public void ADeletedUsersPendingInvitation_IsDropped()
+        {
+            var admin = Guid.NewGuid();
+            var invitee = Guid.NewGuid();
+            var group = NewNamed(admin);
+            group.Invite(invitee, admin);
+
+            group.RemoveDeletedUser(invitee, []);
+
+            group.Members.Should().NotContain(m => m.UserId == invitee);
+        }
+
+        [Fact]
+        public void ADeletedUser_LeavesAPair()
+        {
+            var userA = Guid.NewGuid();
+            var userB = Guid.NewGuid();
+            var pair = Group.CreatePair(Guid.NewGuid(), "USD", userA, userB);
+
+            pair.RemoveDeletedUser(userA, []);
+
+            pair.IsActiveMember(userA).Should().BeFalse();
+            pair.IsActiveMember(userB).Should().BeTrue();
+        }
+
+        [Fact]
+        public void WhenTheLastAdminIsDeleted_TheEarliestRealMemberBecomesAdmin()
+        {
+            var admin = Guid.NewGuid();
+            var placeholder = Guid.NewGuid();
+            var first = Guid.NewGuid();
+            var second = Guid.NewGuid();
+            var group = NewNamed(admin);
+            group.AddPlaceholder(placeholder, admin);
+
+            foreach (var member in new[] { first, second })
+            {
+                group.Invite(member, admin);
+                group.Accept(member);
+            }
+
+            group.RemoveDeletedUser(admin, [placeholder]);
+
+            group.Members.Single(m => m.UserId == first).Role.Should().Be(GroupMemberRole.Admin);
+            group.Members.Single(m => m.UserId == second).Role.Should().Be(GroupMemberRole.Member);
+            group.Members.Single(m => m.UserId == placeholder).Role.Should().Be(GroupMemberRole.Member);
+        }
+
+        [Fact]
+        public void WhenTheLastAdminIsDeleted_AndOnlyPlaceholdersRemain_NoOneBecomesAdmin()
+        {
+            var admin = Guid.NewGuid();
+            var placeholder = Guid.NewGuid();
+            var group = NewNamed(admin);
+            group.AddPlaceholder(placeholder, admin);
+
+            group.RemoveDeletedUser(admin, [placeholder]);
+
+            group.Members.Should().NotContain(m => m.Status == GroupMemberStatus.Active && m.Role == GroupMemberRole.Admin);
+        }
     }
 }

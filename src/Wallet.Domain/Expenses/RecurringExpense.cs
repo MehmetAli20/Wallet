@@ -150,6 +150,11 @@ namespace Wallet.Domain.Expenses
             IsActive = false;
         }
 
+        public bool CanPostIn(Group group) =>
+            group.IsActiveMember(PayerId)
+            && group.IsActiveMember(CreatedBy)
+            && _participants.All(p => group.IsActiveMember(p.UserId));
+
         public IReadOnlyList<Guid> ParticipantIds() =>
             _participants.Select(p => p.UserId).ToList();
 

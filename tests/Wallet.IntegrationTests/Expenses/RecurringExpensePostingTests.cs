@@ -1,9 +1,16 @@
 using FluentAssertions;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Wallet.Application;
+using Wallet.Application.Abstractions.Users;
 using Wallet.Application.Expenses.PostRecurringOccurrence;
+using Wallet.Application.Expenses.ProcessDueRecurringExpenses;
 using Wallet.Domain.Expenses;
 using Wallet.Domain.Groups;
 using Wallet.Domain.Users;
+using Wallet.Infrastructure;
 using Wallet.Infrastructure.Persistence;
 using Wallet.Infrastructure.Persistence.Repositories.Expenses;
 using Wallet.Infrastructure.Persistence.Repositories.Groups;
@@ -65,17 +72,18 @@ namespace Wallet.IntegrationTests.Expenses
         }
 
         [Fact]
-        public async Task TheJobPostsEveryDueItem_AndSurvivesOneThatCannot()
+        public async Task TheJob_StopsARecurringExpenseWhoseMemberLeft_AndStillPostsTheOthers()
         {
             var payer = Guid.NewGuid();
             var other = Guid.NewGuid();
-            var healthyGroup = await SeedGroupAsync(payer, other);
-
-            var occurrence = DateTimeOffset.UtcNow.AddDays(-1);
-            await SeedRecurringAsync(healthyGroup, payer, other, 100m, occurrence);
 
             var brokenGroup = await SeedGroupAsync(payer, other);
-            var brokenId = await SeedRecurringAsync(brokenGroup, payer, other, 100m, occurrence);
+            var brokenId = await SeedRecurringAsync(
+                brokenGroup, payer, other, 100m, new DateTimeOffset(2021, 1, 1, 0, 0, 0, TimeSpan.Zero));
+
+            var healthyGroup = await SeedGroupAsync(payer, other);
+            await SeedRecurringAsync(
+                healthyGroup, payer, other, 100m, new DateTimeOffset(2021, 1, 2, 0, 0, 0, TimeSpan.Zero));
 
             await using (var context = _fixture.CreateContext(TestCurrentUser.System))
             {
@@ -84,48 +92,75 @@ namespace Wallet.IntegrationTests.Expenses
                 await new UnitOfWork(context).SaveChangesAsync();
             }
 
-            await using (var context = _fixture.CreateContext(TestCurrentUser.System))
-            {
-                var due = await new RecurringExpenseRepository(context)
-                    .GetDueAsync(DateTimeOffset.UtcNow);
-
-                due.Should().HaveCountGreaterThanOrEqualTo(2);
-            }
-
-            var posted = 0;
-
-            foreach (var groupId in new[] { healthyGroup, brokenGroup })
-            {
-                await using var context = _fixture.CreateContext(TestCurrentUser.System);
-
-                var recurring = await context.RecurringExpenses
-                    .Include(r => r.Participants)
-                    .SingleAsync(r => r.GroupId == groupId);
-
-                try
-                {
-                    await CreateHandler(context).Handle(
-                        new PostRecurringOccurrenceCommand(
-                            recurring.Id, recurring.NextOccurrence, Guid.NewGuid().ToString()),
-                        CancellationToken.None);
-
-                    posted++;
-                }
-                catch
-                {
-                }
-            }
+            var posted = await RunTheJobAsync(new DateTimeOffset(2021, 1, 3, 0, 0, 0, TimeSpan.Zero));
 
             posted.Should().Be(1);
 
-            await using (var verify = _fixture.CreateContext(TestCurrentUser.System))
-            {
-                (await verify.Expenses.CountAsync(e => e.GroupId == healthyGroup)).Should().Be(1);
-                (await verify.Expenses.CountAsync(e => e.GroupId == brokenGroup)).Should().Be(0);
+            await using var verify = _fixture.CreateContext(TestCurrentUser.System);
 
-                var broken = await verify.RecurringExpenses.SingleAsync(r => r.Id == brokenId);
-                broken.NextOccurrence.Should().BeCloseTo(occurrence.ToUniversalTime(), TimeSpan.FromSeconds(1));
+            (await verify.Expenses.CountAsync(e => e.GroupId == healthyGroup)).Should().Be(1);
+            (await verify.Expenses.CountAsync(e => e.GroupId == brokenGroup)).Should().Be(0);
+            (await verify.RecurringExpenses.SingleAsync(r => r.Id == brokenId)).IsActive.Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task AnOccurrenceThatFailed_IsPostedOnTheNextRun()
+        {
+            var payer = Guid.NewGuid();
+            var other = Guid.NewGuid();
+
+            var failingGroup = await SeedGroupAsync(payer, other);
+            var failingId = await SeedRecurringAsync(
+                failingGroup, payer, other, 100m, new DateTimeOffset(2022, 1, 1, 0, 0, 0, TimeSpan.Zero));
+
+            var healthyGroup = await SeedGroupAsync(payer, other);
+            await SeedRecurringAsync(
+                healthyGroup, payer, other, 100m, new DateTimeOffset(2022, 1, 2, 0, 0, 0, TimeSpan.Zero));
+
+            var asOf = new DateTimeOffset(2022, 1, 3, 0, 0, 0, TimeSpan.Zero);
+
+            await using (var context = _fixture.CreateContext(TestCurrentUser.System))
+            {
+                await context.Database.ExecuteSqlAsync(
+                    $"UPDATE \"RecurringExpenseParticipants\" SET \"FixedShare\" = 0.001 WHERE \"RecurringExpenseId\" = {failingId} AND \"UserId\" = {other}");
             }
+
+            (await RunTheJobAsync(asOf)).Should().Be(1);
+
+            await using (var context = _fixture.CreateContext(TestCurrentUser.System))
+            {
+                await context.Database.ExecuteSqlAsync(
+                    $"UPDATE \"RecurringExpenseParticipants\" SET \"FixedShare\" = NULL WHERE \"RecurringExpenseId\" = {failingId}");
+            }
+
+            (await RunTheJobAsync(asOf)).Should().Be(1);
+
+            await using var verify = _fixture.CreateContext(TestCurrentUser.System);
+
+            (await verify.Expenses.CountAsync(e => e.GroupId == failingGroup)).Should().Be(1);
+            (await verify.Expenses.CountAsync(e => e.GroupId == healthyGroup)).Should().Be(1);
+        }
+
+        private async Task<int> RunTheJobAsync(DateTimeOffset asOf)
+        {
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["ConnectionStrings:WalletDb"] = _fixture.ConnectionString
+                })
+                .Build();
+
+            var services = new ServiceCollection();
+            services.AddLogging();
+            services.AddApplication();
+            services.AddInfrastructure(configuration);
+            services.AddSingleton<ICurrentUser>(TestCurrentUser.System);
+
+            await using var provider = services.BuildServiceProvider();
+            await using var scope = provider.CreateAsyncScope();
+
+            return await scope.ServiceProvider.GetRequiredService<ISender>()
+                .Send(new ProcessDueRecurringExpensesCommand(asOf));
         }
 
         private async Task<Guid> SeedRecurringAsync(

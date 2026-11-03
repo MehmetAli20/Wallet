@@ -21,6 +21,7 @@ namespace Wallet.Application.Transfers.TransferMoney
         private readonly ISettlementRepository _settlements;
         private readonly ICurrentUser _currentUser;
         private readonly IUserRepository _users;
+        private readonly IGroupBalanceRepository _balances;
 
         public TransferMoneyCommandHandler(
             IAccountRepository accounts,
@@ -29,7 +30,8 @@ namespace Wallet.Application.Transfers.TransferMoney
             TransferService transferService,
             ISettlementRepository settlements,
             ICurrentUser currentUser,
-            IUserRepository users)
+            IUserRepository users,
+            IGroupBalanceRepository balances)
         {
             _accounts = accounts;
             _groups = groups;
@@ -38,6 +40,7 @@ namespace Wallet.Application.Transfers.TransferMoney
             _settlements = settlements;
             _currentUser = currentUser;
             _users = users;
+            _balances = balances;
         }
 
         public async Task Handle(TransferMoneyCommand request, CancellationToken cancellationToken)
@@ -49,16 +52,19 @@ namespace Wallet.Application.Transfers.TransferMoney
 
             if (request.OnBehalfOfUserId is { } onBehalfOf)
             {
-                var party = await _users.GetByIdAsync(onBehalfOf, cancellationToken)
-                    ?? throw new InvalidTransferException("Payer not found.");
+                if (!group.HasLeft(onBehalfOf))
+                {
+                    var party = await _users.GetByIdAsync(onBehalfOf, cancellationToken)
+                        ?? throw new InvalidTransferException("Payer not found.");
 
-                if (!party.IsPlaceholder)
-                    throw new InvalidTransferException(
-                        "A settlement can only be recorded on behalf of a placeholder.");
+                    if (!party.IsPlaceholder)
+                        throw new InvalidTransferException(
+                            "A settlement can only be recorded on behalf of a placeholder or someone who left the group.");
 
-                if (!group.IsActiveMember(onBehalfOf))
-                    throw new InvalidTransferException(
-                        "The payer is not an active member of this group.");
+                    if (!group.IsActiveMember(onBehalfOf))
+                        throw new InvalidTransferException(
+                            "The payer is not an active member of this group.");
+                }
 
                 payerId = onBehalfOf;
             }
@@ -66,21 +72,44 @@ namespace Wallet.Application.Transfers.TransferMoney
             if (request.RecipientUserId == payerId)
                 throw new InvalidTransferException("Cannot transfer to yourself.");
 
-            if (!group.IsActiveMember(request.RecipientUserId))
+            var withFormerMember = group.HasLeft(payerId) || group.HasLeft(request.RecipientUserId);
+
+            if (withFormerMember
+                && _currentUser.UserId != payerId
+                && _currentUser.UserId != request.RecipientUserId)
+                throw new InvalidTransferException(
+                    "Only the other side can settle with someone who left the group.");
+
+            if (!withFormerMember && !group.IsActiveMember(request.RecipientUserId))
                 throw new InvalidTransferException("The recipient is not an active member of this group.");
+
+            var settlement = withFormerMember
+                ? Settlement.RecordWithFormerMember(
+                    Guid.NewGuid(), group, payerId, request.RecipientUserId, request.Amount,
+                    await OpenDebtAsync(group.Id, payerId, request.RecipientUserId, cancellationToken),
+                    DateTimeOffset.UtcNow)
+                : Settlement.Record(
+                    Guid.NewGuid(), group, payerId, request.RecipientUserId,
+                    request.Amount, DateTimeOffset.UtcNow);
 
             var payer = await ResolveAccountAsync(payerId, group.Currency, cancellationToken);
             var payee = await ResolveAccountAsync(request.RecipientUserId, group.Currency, cancellationToken);
 
             _transferService.Settle(payer, payee, new Money(request.Amount, group.Currency), group.Id);
 
-            var settlement = Settlement.Record(
-                Guid.NewGuid(), group, payerId, request.RecipientUserId,
-                request.Amount, DateTimeOffset.UtcNow);
-
             await _settlements.AddAsync(settlement, cancellationToken);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
+        private async Task<decimal> OpenDebtAsync(
+            Guid groupId, Guid debtorId, Guid creditorId, CancellationToken cancellationToken)
+        {
+            var debts = await _balances.GetDebtsAsync(groupId, cancellationToken);
+
+            return debts
+                .Where(d => d.DebtorId == debtorId && d.CreditorId == creditorId)
+                .Sum(d => d.Amount);
         }
 
         private async Task<Account> ResolveAccountAsync(Guid ownerId, string currency, CancellationToken cancellationToken)

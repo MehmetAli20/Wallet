@@ -6,5 +6,5 @@ namespace Wallet.Application.Expenses.PostRecurringOccurrence
     public record PostRecurringOccurrenceCommand(
         Guid RecurringExpenseId,
         DateTimeOffset Occurrence,
-        string IdempotencyKey) : IRequest<Guid>, IIdempotentRequest;
+        string IdempotencyKey) : IRequest<Guid?>, IIdempotentRequest;
 }

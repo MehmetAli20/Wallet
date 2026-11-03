@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Wallet.Application.Abstractions.Expenses;
 using Wallet.Application.Expenses.PostRecurringOccurrence;
@@ -9,16 +10,16 @@ namespace Wallet.Application.Expenses.ProcessDueRecurringExpenses
         : IRequestHandler<ProcessDueRecurringExpensesCommand, int>
     {
         private readonly IRecurringExpenseRepository _recurring;
-        private readonly ISender _sender;
+        private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<ProcessDueRecurringExpensesCommandHandler> _logger;
 
         public ProcessDueRecurringExpensesCommandHandler(
             IRecurringExpenseRepository recurring,
-            ISender sender,
+            IServiceScopeFactory scopeFactory,
             ILogger<ProcessDueRecurringExpensesCommandHandler> logger)
         {
             _recurring = recurring;
-            _sender = sender;
+            _scopeFactory = scopeFactory;
             _logger = logger;
         }
 
@@ -35,11 +36,19 @@ namespace Wallet.Application.Expenses.ProcessDueRecurringExpenses
 
                 try
                 {
-                    await _sender.Send(
+                    using var scope = _scopeFactory.CreateScope();
+                    var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+
+                    var expenseId = await sender.Send(
                         new PostRecurringOccurrenceCommand(recurring.Id, occurrence, key),
                         cancellationToken);
 
-                    posted++;
+                    if (expenseId is null)
+                        _logger.LogInformation(
+                            "Recurring expense {RecurringExpenseId} was stopped because one of its members left the group.",
+                            recurring.Id);
+                    else
+                        posted++;
                 }
                 catch (Exception exception)
                 {

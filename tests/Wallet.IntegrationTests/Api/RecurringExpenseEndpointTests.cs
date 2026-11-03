@@ -112,7 +112,7 @@ namespace Wallet.IntegrationTests.Api
                 900m,
                 "Kira",
                 RecurrenceInterval.Monthly,
-                new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero),
+                DateTimeOffset.UtcNow.AddDays(1),
                 new List<ExpenseParticipantRequest> { new(payerId, null) });
 
         private static async Task<HttpResponseMessage> PostAsync(

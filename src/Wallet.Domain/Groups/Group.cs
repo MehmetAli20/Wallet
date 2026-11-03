@@ -226,7 +226,42 @@ namespace Wallet.Domain.Groups
             Raise(new MemberRemoved(Id, userId, removedBy, DateTimeOffset.UtcNow));
         }
 
+        public void RemoveDeletedUser(Guid userId, IReadOnlyCollection<Guid> placeholderIds)
+        {
+            var member = _members.SingleOrDefault(m => m.UserId == userId);
+
+            if (member is null || member.Status == GroupMemberStatus.Removed)
+                return;
+
+            if (member.Status == GroupMemberStatus.Invited)
+            {
+                DeclineInvitation(userId);
+                return;
+            }
+
+            if (member.Role == GroupMemberRole.Admin
+                && !_members.Any(m => m.UserId != userId
+                                   && m.Role == GroupMemberRole.Admin
+                                   && m.Status == GroupMemberStatus.Active))
+            {
+                _members
+                    .Where(m => m.UserId != userId
+                             && m.Status == GroupMemberStatus.Active
+                             && !placeholderIds.Contains(m.UserId))
+                    .OrderBy(m => m.JoinedAt)
+                    .FirstOrDefault()
+                    ?.MakeAdmin();
+            }
+
+            member.Remove();
+
+            Raise(new MemberRemoved(Id, userId, userId, DateTimeOffset.UtcNow));
+        }
+
         public bool IsActiveMember(Guid userId) =>
             _members.Any(m => m.UserId == userId && m.Status == GroupMemberStatus.Active);
+
+        public bool HasLeft(Guid userId) =>
+            _members.Any(m => m.UserId == userId && m.Status == GroupMemberStatus.Removed);
     }
 }

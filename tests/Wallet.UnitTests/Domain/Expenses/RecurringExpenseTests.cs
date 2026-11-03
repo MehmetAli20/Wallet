@@ -156,5 +156,36 @@ namespace Wallet.UnitTests.Domain.Expenses
 
             act.Should().Throw<InvalidExpenseException>();
         }
+
+        [Fact]
+        public void ItCannotPost_OnceAParticipantHasLeft()
+        {
+            var (group, members) = NewGroup(3);
+
+            var recurring = RecurringExpense.Create(
+                Guid.NewGuid(), group, members[0], members[0], 900m, "Kira",
+                RecurrenceInterval.Monthly, DateTimeOffset.UtcNow, members);
+
+            recurring.CanPostIn(group).Should().BeTrue();
+
+            group.Remove(members[2], members[0]);
+
+            recurring.CanPostIn(group).Should().BeFalse();
+        }
+
+        [Fact]
+        public void ItCannotPost_OnceItsCreatorHasLeft()
+        {
+            var (group, members) = NewGroup(3);
+
+            var recurring = RecurringExpense.Create(
+                Guid.NewGuid(), group, members[0], members[2], 900m, "Kira",
+                RecurrenceInterval.Monthly, DateTimeOffset.UtcNow,
+                new List<Guid> { members[0], members[1] });
+
+            group.Remove(members[2], members[0]);
+
+            recurring.CanPostIn(group).Should().BeFalse();
+        }
     }
 }
